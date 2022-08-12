@@ -1,5 +1,5 @@
 /*
-! tailwindcss v3.1.4 | MIT License | https://tailwindcss.com
+! tailwindcss v3.1.8 | MIT License | https://tailwindcss.com
 */
 
 /*
@@ -355,13 +355,6 @@ input::-moz-placeholder, textarea::-moz-placeholder {
   /* 2 */
 }
 
-input:-ms-input-placeholder, textarea:-ms-input-placeholder {
-  opacity: 1;
-  /* 1 */
-  color: #9ca3af;
-  /* 2 */
-}
-
 input::placeholder,
 textarea::placeholder {
   opacity: 1;
@@ -558,45 +551,67 @@ video {
   --tw-backdrop-sepia:  ;
 }
 
-.container {
-  width: 100%;
+.col-span-full {
+  grid-column: 1 / -1;
 }
 
-@media (min-width: 640px) {
-  .container {
-    max-width: 640px;
-  }
+.col-start-1 {
+  grid-column-start: 1;
 }
 
-@media (min-width: 768px) {
-  .container {
-    max-width: 768px;
-  }
+.col-start-2 {
+  grid-column-start: 2;
 }
 
-@media (min-width: 1024px) {
-  .container {
-    max-width: 1024px;
-  }
+.col-start-3 {
+  grid-column-start: 3;
 }
 
-@media (min-width: 1280px) {
-  .container {
-    max-width: 1280px;
-  }
+.col-end-12 {
+  grid-column-end: 12;
 }
 
-@media (min-width: 1536px) {
-  .container {
-    max-width: 1536px;
-  }
+.row-start-1 {
+  grid-row-start: 1;
 }
 
-.relative {
-  position: relative;
+.row-start-2 {
+  grid-row-start: 2;
 }
 
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
+.row-end-7 {
+  grid-row-end: 7;
+}
+
+.grid {
+  display: grid;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.w-screen {
+  width: 100vw;
+}
+
+.snap-both {
+  scroll-snap-type: both var(--tw-scroll-snap-strictness);
+}
+
+.snap-proximity {
+  --tw-scroll-snap-strictness: proximity;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+.text-4xl {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
 }
