@@ -410,6 +410,11 @@ video {
   height: auto;
 }
 
+a {
+  -webkit-text-decoration-line: underline;
+          text-decoration-line: underline;
+}
+
 *, ::before, ::after {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
@@ -583,6 +588,10 @@ video {
   grid-row-end: 7;
 }
 
+.flex {
+  display: flex;
+}
+
 .grid {
   display: grid;
 }
@@ -607,15 +616,39 @@ video {
   scroll-snap-align: start;
 }
 
+.flex-col {
+  flex-direction: column;
+}
+
+.justify-around {
+  justify-content: space-around;
+}
+
 .scroll-smooth {
   scroll-behavior: smooth;
+}
+
+.text-center {
+  text-align: center;
 }
 
 .font-\[Vollkorn\] {
   font-family: Vollkorn;
 }
 
+.text-\[6vw\] {
+  font-size: 6vw;
+}
+
 .text-4xl {
   font-size: 2.25rem;
   line-height: 2.5rem;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.tracking-widest {
+  letter-spacing: 0.1em;
 }
