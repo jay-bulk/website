@@ -415,6 +415,10 @@ a {
           text-decoration-line: underline;
 }
 
+h1 {
+  text-transform: uppercase;
+}
+
 *, ::before, ::after {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
@@ -1189,6 +1193,11 @@ a {
 
 .row-end-7 {
   grid-row-end: 7;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .flex {
