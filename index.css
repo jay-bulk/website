@@ -1212,12 +1212,17 @@ h1 {
   font-family: Vollkorn;
 }
 
-.text-\[6vw\] {
-  font-size: 6vw;
+.text-5xl {
+  font-size: 3rem;
+  line-height: 1;
 }
 
 .uppercase {
   text-transform: uppercase;
+}
+
+.leading-relaxed {
+  line-height: 1.625;
 }
 
 .tracking-widest {
