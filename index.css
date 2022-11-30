@@ -1163,20 +1163,8 @@ h1 {
   margin-bottom: 0;
 }
 
-.col-span-full {
-  grid-column: 1 / -1;
-}
-
 .col-start-3 {
   grid-column-start: 3;
-}
-
-.col-start-4 {
-  grid-column-start: 4;
-}
-
-.row-start-2 {
-  grid-row-start: 2;
 }
 
 .mx-auto {
