@@ -560,14 +560,6 @@ h1 {
   --tw-backdrop-sepia:  ;
 }
 
-.col-start-3 {
-  grid-column-start: 3;
-}
-
-.col-start-4 {
-  grid-column-start: 4;
-}
-
 .mb-2 {
   margin-bottom: 0.5rem;
 }
@@ -576,28 +568,28 @@ h1 {
   display: flex;
 }
 
-.grid {
-  display: grid;
-}
-
 .min-h-screen {
   min-height: 100vh;
+}
+
+.flex-auto {
+  flex: 1 1 auto;
 }
 
 .grow {
   flex-grow: 1;
 }
 
-.grid-flow-col {
-  grid-auto-flow: column;
-}
-
-.grid-cols-\[auto_1fr\] {
-  grid-template-columns: auto 1fr;
-}
-
 .flex-col {
   flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.justify-end {
+  justify-content: flex-end;
 }
 
 .justify-around {
@@ -606,6 +598,10 @@ h1 {
 
 .gap-2 {
   gap: 0.5rem;
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
 }
 
 .p-1 {
