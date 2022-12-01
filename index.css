@@ -620,6 +620,11 @@ h1 {
   font-family: Vollkorn;
 }
 
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
 .text-4xl {
   font-size: 2.25rem;
   line-height: 2.5rem;
@@ -637,6 +642,17 @@ h1 {
   letter-spacing: 0.1em;
 }
 
-.\[font-size\:20px\] {
-  font-size: 20px;
+.\[font-size\:16px\] {
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  .sm\:text-5xl {
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  .sm\:leading-relaxed {
+    line-height: 1.625;
+  }
 }
