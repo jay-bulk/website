@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="en" class="font-[Vollkorn] [font-size:16px]"><head><title>Mob Liberty; Mobus Operandi</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/index.css?v=1670860649516"><link rel="stylesheet" href="../../fullcalendar.css"><style>
+              @font-face {
+                font-family: 'Vollkorn';
+                src: url('/vollkorn.ttf') format('truetype');
+              }
+            </style></head><body class="min-h-screen p-1 flex flex-col gap-1"><div class="flex items-center flex-wrap gap-x-2 gap-y-1 uppercase text-lg"><div class="flex-1 flex flex-wrap"><div class="flex-initial flex flex-col gap-x-2 whitespace-nowrap"><p class="tracking-widest text-center">Mobus Operandi</p><p class="text-sm text-slate-700">A mob programming community</p></div></div><div class="flex-auto flex justify-end flex-wrap gap-x-2"><a href="../../index.html">Calendar</a><a href="../../join.html">Join</a><a href="../../publish.html">Publish</a><a href="https://twitter.com/mobusoperandi">Twitter</a></div></div><hr></hr><div class=" grow flex flex-col justify-center"><h1 class="text-center text-4xl">Mob Liberty</h1><hr></hr><div></div><script defer src="../../fullcalendar.js"></script><script>window.addEventListener('DOMContentLoaded', () => {
+                const events = JSON.parse('[{"start":"2022-12-12T06:00:00Z","end":"2022-12-12T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2022-12-16T06:00:00Z","end":"2022-12-16T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2022-12-19T06:00:00Z","end":"2022-12-19T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2022-12-23T06:00:00Z","end":"2022-12-23T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2022-12-26T06:00:00Z","end":"2022-12-26T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2022-12-30T06:00:00Z","end":"2022-12-30T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-02T06:00:00Z","end":"2023-01-02T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-06T06:00:00Z","end":"2023-01-06T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-09T06:00:00Z","end":"2023-01-09T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-13T06:00:00Z","end":"2023-01-13T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-16T06:00:00Z","end":"2023-01-16T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-20T06:00:00Z","end":"2023-01-20T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-23T06:00:00Z","end":"2023-01-23T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-27T06:00:00Z","end":"2023-01-27T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-01-30T06:00:00Z","end":"2023-01-30T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-02-03T06:00:00Z","end":"2023-02-03T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-02-06T06:00:00Z","end":"2023-02-06T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-02-10T06:00:00Z","end":"2023-02-10T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-02-13T06:00:00Z","end":"2023-02-13T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-02-17T06:00:00Z","end":"2023-02-17T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"},{"start":"2023-02-20T06:00:00Z","end":"2023-02-20T08:00:00Z","title":"Mob Liberty","url":"","backgroundColor":"#b8860b","textColor":"#fff8dc"}]')
+                /* global FullCalendar */
+; (() => {
+  const styleElm = document.createElement('style');
+  document.head.append(styleElm);
+  styleElm.sheet.insertRule('.fc .fc-toolbar .fc-toolbar-title { font-size: inherit }')
+  styleElm.sheet.insertRule('.fc .fc-toolbar.fc-header-toolbar { margin-bottom: 0.5em; }')
+  const calendarEl = document.querySelector('div:empty')
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'timeGridWeek',
+    slotDuration: '01:00:00',
+    expandRows: true,
+    dayHeaderFormat: { weekday: 'short' },
+    views: {
+      timeGridWeek: {
+        allDaySlot: false
+      }
+    },
+    events,
+    height: 'auto',
+    nowIndicator: true,
+    eventTextColor: 'black',
+    eventBackgroundColor: 'gray',
+    eventBorderColor: 'gray'
+  })
+  calendar.render()
+  document.querySelector('.fc-toolbar-title').prepend(
+    `Time zone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+    document.createElement('br'),
+  )
+})()
+
+            })</script><iframe class="h-[50vh]" src="https://docs.google.com/document/d/e/2PACX-1vTQSkqBEwv4ujww0Bq_XhSqd4hbUKs0ibuYm76gQyMsr-hAdvaSNIUoMkJSBrrfOXzf5wkj9dvOiBBy/pub?embedded=true"></iframe></div><hr></hr><div class="flex justify-between"><p>© 2022 Shahar Or, licensed <a href="https://tldrlegal.com/license/mit-license">MIT</a>.</p><a href="https://github.com/mobusoperandi/website">Source</a></div></body></html>
