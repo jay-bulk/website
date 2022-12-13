@@ -975,12 +975,12 @@ a {
   margin-bottom: 0;
 }
 
-.flex {
-  display: flex;
+.block {
+  display: block;
 }
 
-.h-\[50vh\] {
-  height: 50vh;
+.flex {
+  display: flex;
 }
 
 .min-h-screen {
@@ -1001,6 +1001,10 @@ a {
 
 .grow {
   flex-grow: 1;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .flex-col {
@@ -1031,6 +1035,10 @@ a {
   gap: 0.25rem;
 }
 
+.gap-6 {
+  gap: 1.5rem;
+}
+
 .gap-x-2 {
   -moz-column-gap: 0.5rem;
        column-gap: 0.5rem;
@@ -1046,6 +1054,11 @@ a {
 
 .p-1 {
   padding: 0.25rem;
+}
+
+.py-12 {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
 }
 
 .text-center {
@@ -1076,6 +1089,10 @@ a {
   line-height: 2.5rem;
 }
 
+.font-bold {
+  font-weight: 700;
+}
+
 .uppercase {
   text-transform: uppercase;
 }
@@ -1095,4 +1112,10 @@ a {
 
 .\[font-size\:16px\] {
   font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  .sm\:grid {
+    display: grid;
+  }
 }
