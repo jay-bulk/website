@@ -975,6 +975,11 @@ a {
   margin-bottom: 0;
 }
 
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .block {
   display: block;
 }
@@ -985,6 +990,10 @@ a {
 
 .min-h-screen {
   min-height: 100vh;
+}
+
+.max-w-screen-xl {
+  max-width: 1280px;
 }
 
 .flex-1 {
@@ -1052,8 +1061,14 @@ a {
   white-space: nowrap;
 }
 
-.p-1 {
-  padding: 0.25rem;
+.py-1 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 
 .py-12 {
@@ -1117,5 +1132,12 @@ a {
 @media (min-width: 640px) {
   .sm\:grid {
     display: grid;
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:px-5 {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
   }
 }
