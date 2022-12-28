@@ -1015,18 +1015,6 @@ a {
   max-width: 1280px;
 }
 
-.flex-1 {
-  flex: 1 1 0%;
-}
-
-.flex-initial {
-  flex: 0 1 auto;
-}
-
-.flex-auto {
-  flex: 1 1 auto;
-}
-
 .grow {
   flex-grow: 1;
 }
@@ -1045,10 +1033,6 @@ a {
 
 .items-center {
   align-items: center;
-}
-
-.justify-end {
-  justify-content: flex-end;
 }
 
 .justify-center {
