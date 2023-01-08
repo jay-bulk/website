@@ -1007,6 +1007,10 @@ a {
   display: flex;
 }
 
+.grid {
+  display: grid;
+}
+
 .h-8 {
   height: 2rem;
 }
@@ -1025,6 +1029,14 @@ a {
 
 .grow {
   flex-grow: 1;
+}
+
+.auto-cols-fr {
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.grid-flow-row {
+  grid-auto-flow: row;
 }
 
 .flex-col {
@@ -1061,6 +1073,14 @@ a {
 
 .gap-6 {
   gap: 1.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-\[1\.25em\] {
+  gap: 1.25em;
 }
 
 .gap-x-2 {
@@ -1166,6 +1186,10 @@ a {
   opacity: 0.75;
 }
 
+.opacity-70 {
+  opacity: 0.7;
+}
+
 .invert {
   --tw-invert: invert(100%);
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
@@ -1180,6 +1204,10 @@ a {
 }
 
 @media (min-width: 640px) {
+  .sm\:grid-flow-col {
+    grid-auto-flow: column;
+  }
+
   .sm\:flex-row {
     flex-direction: row;
   }
