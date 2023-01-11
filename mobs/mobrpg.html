@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en" class="font-[Vollkorn] [font-size:16px] bg-gray-900 text-gray-100"><head><title>Mob RPG; Mobus Operandi</title><meta charset="utf-8"><meta name="description" content="A mob programming community"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/index.css?v=1673425284204"><style>
+<!DOCTYPE html><html lang="en" class="font-[Vollkorn] [font-size:16px] bg-gray-900 text-gray-100"><head><title>Mob RPG; Mobus Operandi</title><meta charset="utf-8"><meta name="description" content="A mob programming community"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/index.css?v=1673448765984"><style>
                   @font-face {
                     font-family: 'Vollkorn';
                     src: url('/vollkorn.ttf') format('truetype');
@@ -10,10 +10,10 @@
 Go to the README and check out the &quot;<a href="https://github.com/gregorriegler/mob-programming-rpg/blob/main/README.md#contribute">Contribute</a>&quot; section.</p>
 <p>There you will find a calender invite to add the event to your calendar.<br />
 And it contains the access to our gather town where we meet and work together.</p>
-</div></div><hr><div class="[--fc-page-bg-color:transparent]"></div><script defer src="/fullcalendar.js"></script><script>window.addEventListener('DOMContentLoaded', () => {
-                const input = JSON.parse('{"displayEventTime":true,"events":[{"backgroundColor":"#00ffff","end":"2023-01-05T19:00:00Z","start":"2023-01-05T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-01-12T19:00:00Z","start":"2023-01-12T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-01-19T19:00:00Z","start":"2023-01-19T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-01-26T19:00:00Z","start":"2023-01-26T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-02T19:00:00Z","start":"2023-02-02T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-09T19:00:00Z","start":"2023-02-09T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-16T19:00:00Z","start":"2023-02-16T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-23T19:00:00Z","start":"2023-02-23T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-03-02T19:00:00Z","start":"2023-03-02T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-03-09T19:00:00Z","start":"2023-03-09T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-03-16T19:00:00Z","start":"2023-03-16T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"}]}')
+</div></div><hr><div class="calendar-container [--fc-page-bg-color:transparent]"></div><script defer src="/fullcalendar.js"></script><script>window.addEventListener('DOMContentLoaded', () => {
+                const input = JSON.parse('{"displayEventTime":true,"events":[{"backgroundColor":"#00ffff","end":"2023-01-05T19:00:00Z","start":"2023-01-05T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-01-12T19:00:00Z","start":"2023-01-12T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-01-19T19:00:00Z","start":"2023-01-19T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-01-26T19:00:00Z","start":"2023-01-26T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-02T19:00:00Z","start":"2023-02-02T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-09T19:00:00Z","start":"2023-02-09T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-16T19:00:00Z","start":"2023-02-16T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-02-23T19:00:00Z","start":"2023-02-23T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-03-02T19:00:00Z","start":"2023-03-02T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-03-09T19:00:00Z","start":"2023-03-09T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"},{"backgroundColor":"#00ffff","end":"2023-03-16T19:00:00Z","start":"2023-03-16T16:00:00Z","textColor":"#000000","title":"","url":"/mobs/mobrpg.html"}],"selectors":{"calendarContainer":".calendar-container"}}')
                 /* global FullCalendar */
-; (function initCalendar ({ events, displayEventTime }) {
+; (function initCalendar ({ events, displayEventTime, selectors }) {
   const styleElm = document.createElement('style');
   document.head.append(styleElm);
   styleElm.sheet.insertRule('.fc .fc-toolbar .fc-toolbar-title { font-size: inherit }')
@@ -21,8 +21,8 @@ And it contains the access to our gather town where we meet and work together.</
   styleElm.sheet.insertRule('.fc .fc-timegrid-slot { height: 2.5em; }')
   styleElm.sheet.insertRule('.fc .fc-event-time { white-space: normal; }')
   styleElm.sheet.insertRule('.fc .fc-event-main-frame { overflow-wrap: break-word; }')
-  const calendarEl = document.querySelector('div:empty')
-  const calendar = new FullCalendar.Calendar(calendarEl, {
+  const calendarContainerElm = document.querySelector(selectors.calendarContainer)
+  const calendar = new FullCalendar.Calendar(calendarContainerElm, {
     initialView: 'timeGridWeek',
     slotDuration: '01:00:00',
     expandRows: true,
@@ -47,5 +47,5 @@ And it contains the access to our gather town where we meet and work together.</
   )
 })
 (input)
-            })</script></div><hr><div class="flex justify-between flex-wrap items-end"><pre class="text-xs"><code>5363c6552fb5a25db1c15093e99a21a64dfca983
+            })</script></div><hr><div class="flex justify-between flex-wrap items-end"><pre class="text-xs"><code>88ef3a052d29844bbd1f302586bf4b285b55d4ff
 </code></pre><a class="text-sm" href="https://github.com/mobusoperandi/website">Source</a></div></body></html>
