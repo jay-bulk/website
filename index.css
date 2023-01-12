@@ -1027,6 +1027,10 @@ a {
   max-width: 100%;
 }
 
+.flex-1 {
+  flex: 1 1 0%;
+}
+
 .grow {
   flex-grow: 1;
 }
@@ -1067,10 +1071,6 @@ a {
   gap: 0.25rem;
 }
 
-.gap-2 {
-  gap: 0.5rem;
-}
-
 .gap-6 {
   gap: 1.5rem;
 }
@@ -1083,6 +1083,10 @@ a {
   gap: 1.25em;
 }
 
+.gap-2 {
+  gap: 0.5rem;
+}
+
 .gap-x-2 {
   -moz-column-gap: 0.5rem;
        column-gap: 0.5rem;
@@ -1090,6 +1094,11 @@ a {
 
 .gap-y-1 {
   row-gap: 0.25rem;
+}
+
+.gap-x-\[1ch\] {
+  -moz-column-gap: 1ch;
+       column-gap: 1ch;
 }
 
 .whitespace-nowrap {
