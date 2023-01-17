@@ -1019,6 +1019,10 @@ a {
   min-height: 100vh;
 }
 
+.w-\[1em\] {
+  width: 1em;
+}
+
 .max-w-screen-xl {
   max-width: 1280px;
 }
@@ -1033,6 +1037,11 @@ a {
 
 .grow {
   flex-grow: 1;
+}
+
+.rotate-180 {
+  --tw-rotate: 180deg;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
 .auto-cols-fr {
@@ -1117,6 +1126,10 @@ a {
 .bg-gray-700 {
   --tw-bg-opacity: 1;
   background-color: rgb(55 65 81 / var(--tw-bg-opacity));
+}
+
+.fill-gray-100 {
+  fill: #f3f4f6;
 }
 
 .p-3 {
