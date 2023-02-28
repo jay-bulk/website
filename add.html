@@ -1,0 +1,116 @@
+<!DOCTYPE html><html lang="en" class="font-[Vollkorn] [font-size:16px] bg-gray-900 text-gray-100"><head><title>Add; Mobus Operandi</title><meta charset="utf-8"><meta name="description" content="A mob programming community"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/index.css?v=1677570989398"><style>
+                            @font-face {
+                                font-family: 'Vollkorn';
+                                src: url('/vollkorn.ttf') format('truetype');
+                            }</style></head><body class="min-h-screen py-1 px-1 md:px-5 flex flex-col gap-1 max-w-screen-xl mx-auto"><div class="flex justify-between items-center flex-wrap gap-x-2 gap-y-1 uppercase text-lg"><div class="flex flex-col gap-x-2 whitespace-nowrap"><a href="/" class="tracking-widest text-center">Mobus Operandi</a><p class="text-sm opacity-75">A mob programming community</p></div><div class="flex items-center gap-x-2"><a href="https://mobusoperandi.zulipchat.com/"><img width="32" alt="Zulip" src="/zulip_logo.svg"></a><a class="invert" href="https://github.com/mobusoperandi"><img width="32" alt="GitHub" src="/inverticat.svg"></a><a href="https://twitter.com/mobusoperandi"><img width="32" alt="Twitter" src="/twitter_logo.svg"></a></div></div><hr><div class="flex flex-col gap-5 grow"><div class="prose prose-invert max-w-full"><h1>Add a mob</h1><p>Mobs are specified in files in <a href="https://github.com/mobusoperandi/website/tree/master/mobs">the <code>mobs</code> directory.</a> Take a look at some of those files for examples.</p><p>To add a mob, submit a <a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests">pull request</a> that adds a mob file.</p></div><ol class="flex flex-col gap-5"><li><div id="MobFile" class="bg-gray-800 p-1 flex flex-col gap-5"><h2 class="text-xl"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">MobFile</span></span></h2><div class="prose prose-invert max-w-full"><p>The contents of a mob file</p>
+</div><ol class="flex flex-col gap-5"><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">title</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>The mob's title</p>
+<p>Example:</p>
+<pre><code class="language-yaml">Agile Bandits
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">subtitle</span></span><span>optional</span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>An optional mob's subtitle</p>
+<p>Example:</p>
+<pre><code class="language-yaml">Hackin' and cruisin'
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">participants</span></span><span>sequence of <a href="#MobParticipant"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">MobParticipant</span></span></a></span></div><div class="prose prose-invert max-w-full"><p>Regular participants of the mob</p>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">schedule</span></span><span>sequence of <a href="#YamlRecurringSession"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">YamlRecurringSession</span></span></a></span></div><div class="prose prose-invert max-w-full"><p>The mob's regular schedule</p>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">background_color</span></span><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/color_value"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Color</span></span></a></div><div class="prose prose-invert max-w-full"><p>Color of the background of calendar event blocks</p>
+<p>Example:</p>
+<pre><code class="language-yaml">aliceblue
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">text_color</span></span><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/color_value"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Color</span></span></a></div><div class="prose prose-invert max-w-full"><p>Color of text inside calendar event blocks</p>
+<p>Example:</p>
+<pre><code class="language-yaml">orangered
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">links</span></span><span>optional</span><span>sequence of <a href="#Link"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Link</span></span></a></span></div><div class="prose prose-invert max-w-full"><p>Links associated with the mob</p>
+<pre><code class="language-yaml">- !YouTube @agilebandits
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">freeform_copy</span></span><a href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Markdown</span></span></a></div><div class="prose prose-invert max-w-full"><p>A description of the mob, the purpose of it, its past attainments, etc.</p>
+<pre><code class="language-yaml">## What we do
+
+We study the BrainShock programming language.
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">status</span></span><a href="#Status"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Status</span></span></a></div><div class="prose prose-invert max-w-full"><p>The mob's current status</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Public |
+  ## Just show up!
+
+  [Room link](https://meet.jit.si/MedievalWebsPortrayLoud)
+</code></pre>
+</div></div></li></ol></div></li><li><div id="MobParticipant" class="bg-gray-800 p-1 flex flex-col gap-5"><h2 class="text-xl"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">MobParticipant</span></span></h2><div class="prose prose-invert max-w-full"><p>A participant in a mob</p>
+</div><div class="flex flex-col gap-5"><div>One of:</div><ol class="flex flex-col gap-5"><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">Hidden</span></span></div><div class="prose prose-invert max-w-full"><p>A mob member who prefers to remain anonymous</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Hidden
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">Public</span></span><a href="#Person"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Person</span></span></a></div><div class="prose prose-invert max-w-full"><p>A mob member who wishes to be publically listed&quot;whitespace-nowrap&quot; &quot;font-mono&quot;</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Public
+name: Forbany Klenbin
+social_url: https://example.com/fk
+avatar_url: https://example.com/fk.png
+</code></pre>
+</div></div></li></ol></div></div></li><li><div id="Person" class="bg-gray-800 p-1 flex flex-col gap-5"><h2 class="text-xl"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Person</span></span></h2><div class="prose prose-invert max-w-full"><p>The public details about a person</p>
+</div><ol class="flex flex-col gap-5"><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">name</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>The person's name</p>
+<p>Example:</p>
+<pre><code class="language-yaml">Nompomer Pilento
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">social_url</span></span><a href="https://developer.mozilla.org/en-US/docs/Glossary/URL"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Url</span></span></a></div><div class="prose prose-invert max-w-full"><p>A social URL</p>
+<p>Example:</p>
+<pre><code class="language-yaml">https://example.com/np
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">avatar_url</span></span><span>optional</span><a href="https://developer.mozilla.org/en-US/docs/Glossary/URL"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Url</span></span></a></div><div class="prose prose-invert max-w-full"><p>An avatar image URL</p>
+<p>Example:</p>
+<pre><code class="language-yaml">https://example.com/np.png
+</code></pre>
+</div></div></li></ol></div></li><li><div id="YamlRecurringSession" class="bg-gray-800 p-1 flex flex-col gap-5"><h2 class="text-xl"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">YamlRecurringSession</span></span></h2><div class="prose prose-invert max-w-full"><p>Specification for a recurring session</p>
+</div><ol class="flex flex-col gap-5"><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">frequency</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>Frequency of the recurrence in <a href="https://icalendar.org/iCalendar-RFC-5545/3-8-5-3-recurrence-rule.html">RRULE</a> format</p>
+<p>Example:</p>
+<pre><code class="language-yaml">FREQ=WEEKLY;BYDAY=MO,TU,WE,TH
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">timezone</span></span><a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Tz</span></span></a></div><div class="prose prose-invert max-w-full"><p>The schedule's timezone</p>
+<p>Example:</p>
+<pre><code class="language-yaml">Africa/Dakar
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">start_date</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>Date of the first session of this schedule</p>
+<p>Example:</p>
+<pre><code class="language-yaml">2023-02-27
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">start_time</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>Session start time</p>
+<p>Example:</p>
+<pre><code class="language-yaml">04:00
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="font-bold text-blue-400"><span class="whitespace-nowrap font-mono">duration</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>Session duration in minutes</p>
+<p>Example:</p>
+<pre><code class="language-yaml">180
+</code></pre>
+</div></div></li></ol></div></li><li><div id="Link" class="bg-gray-800 p-1 flex flex-col gap-5"><h2 class="text-xl"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Link</span></span></h2><div class="prose prose-invert max-w-full"><p>A link that showcases the mob</p>
+</div><div class="flex flex-col gap-5"><div>One of:</div><ol class="flex flex-col gap-5"><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">YouTube</span></span><span class="text-orange-400"><span class="whitespace-nowrap font-mono">scalar</span></span></div><div class="prose prose-invert max-w-full"><p>A YouTube channel ID</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!YouTube &quot;@mobseattle&quot;
+</code></pre>
+</div></div></li></ol></div></div></li><li><div id="Status" class="bg-gray-800 p-1 flex flex-col gap-5"><h2 class="text-xl"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Status</span></span></h2><div class="prose prose-invert max-w-full"><p>A mob's status</p>
+</div><div class="flex flex-col gap-5"><div>One of:</div><ol class="flex flex-col gap-5"><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">Short</span></span><a href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Markdown</span></span></a></div><div class="prose prose-invert max-w-full"><p>This mob is not active yet because it needs more members.</p>
+<p>The value explains how to apply.</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Short |
+  To apply contact [Kelly](https://example.com/kelly).
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">Open</span></span><a href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Markdown</span></span></a></div><div class="prose prose-invert max-w-full"><p>This mob is taking applications for new participants.</p>
+<p>The value explains how to apply.</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Open |
+  To apply contact [Dawn](https://example.com/dawn).
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">Full</span></span><span>optional</span><a href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Markdown</span></span></a></div><div class="prose prose-invert max-w-full"><p>This mob is not currently taking applications.</p>
+<p>The value is optional.</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Full |
+  We are currently full.
+</code></pre>
+</div></div></li><li><div class="bg-gray-700 p-1 rounded flex flex-col gap-5"><div class="flex gap-[1ch]"><span class="whitespace-nowrap font-mono text-red-400">!<span class="whitespace-nowrap font-mono">Public</span></span><a href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"><span class="text-orange-400"><span class="whitespace-nowrap font-mono">Markdown</span></span></a></div><div class="prose prose-invert max-w-full"><p>This mob's sessions are open for anyone to join.</p>
+<p>The value explains how to join.</p>
+<p>Example:</p>
+<pre><code class="language-yaml">!Public |
+  [Room link](https://meet.jit.si/MedievalWebsPortrayLoud)
+</code></pre>
+</div></div></li></ol></div></div></li></ol></div><hr><div class="flex justify-between flex-wrap items-end"><pre class="text-xs"><code>81d5ceefd7f6ad4925e4bc28f5f8b10017a00bff
+</code></pre><a class="text-sm" href="https://github.com/mobusoperandi/website">Source</a></div></body></html>
