@@ -1064,6 +1064,10 @@ a {
   grid-auto-flow: row;
 }
 
+.grid-cols-\[auto_auto_1fr\] {
+  grid-template-columns: auto auto 1fr;
+}
+
 .flex-col {
   flex-direction: column;
 }
@@ -1196,6 +1200,11 @@ a {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
 .text-4xl {
   font-size: 2.25rem;
   line-height: 2.5rem;
@@ -1280,6 +1289,10 @@ a {
 
 .\[font-size\:16px\] {
   font-size: 16px;
+}
+
+.\[text-shadow\:_-1px_-1px_3px_black\2c _-1px_1px_3px_black\2c _1px_-1px_3px_black\2c _1px_1px_3px_black\] {
+  text-shadow: -1px -1px 3px black, -1px 1px 3px black, 1px -1px 3px black, 1px 1px 3px black;
 }
 
 @media (min-width: 640px) {
