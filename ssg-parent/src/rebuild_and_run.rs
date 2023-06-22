@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 
 use async_fn_stream::fn_stream;
+use futures_util::FutureExt;
 use thiserror::Error;
 use tokio::task::JoinError;
 use watchexec::{
@@ -42,8 +43,7 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
 
     let stream = fn_stream(|emitter| async {
         runtime_config.on_action(move |action| {
-            return emitter.emit(());
-            //Result::<(), Infallible>::Ok(())
+            return emitter.emit(()).map(|s| Result::<(), Infallible>::Ok(()));
         });
     });
 
