@@ -20,7 +20,7 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
 
     let runtime_config = RuntimeConfig::default();
 
-    runtime_config.pathset(["builder"]);
+    runtime_config.pathset();
 
     WatchError::Exit(status)
 }
