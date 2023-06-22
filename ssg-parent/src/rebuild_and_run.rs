@@ -1,7 +1,7 @@
-use std::process::ExitStatus;
+use std::{convert::Infallible, process::ExitStatus};
 
 use thiserror::Error;
-use tokio::process::Command;
+use tokio::{process::Command, task::JoinError};
 use watchexec::{
     config::{InitConfig, RuntimeConfig},
     error::CriticalError,
@@ -16,26 +16,33 @@ pub enum WatchError {
     Exit(std::process::ExitStatus),
     #[error(transparent)]
     Critical(#[from] CriticalError),
+    #[error("unexpected termination")]
+    UnexpectedTermination,
+    #[error(transparent)]
+    Join(#[from] JoinError),
 }
 
 pub async fn watch_for_changes_and_rebuild() -> WatchError {
     let mut init_config = InitConfig::default();
 
-    init_config.on_error(|error: ErrorHook| async {
+    init_config.on_error(|error: ErrorHook| async move {
         eprintln!("{}", error.error);
-        Ok(())
+        Result::<(), Infallible>::Ok(())
     });
 
-    let runtime_config = RuntimeConfig::default();
+    let mut runtime_config = RuntimeConfig::default();
 
     runtime_config.pathset(["builder"]);
 
-    let watchexec = match Watchexec::new(init_config, runtime_config) {
+    let watchexec = match Watchexec::new(init_config, runtime_config.clone()) {
         Ok(watchexec) => watchexec,
         Err(error) => return error.into(),
     };
 
-    runtime_config.command(command);
+    runtime_config.on_action(|action| async { Result::<(), Infallible>::Ok(()) });
 
-    WatchError::Exit(ExitStatus::)
+    match watchexec.main().await {
+        Ok(_) => WatchError::UnexpectedTermination,
+        Err(error) => error.into(),
+    }
 }
