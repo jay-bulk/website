@@ -1,3 +1,5 @@
+use std::process::ExitStatus;
+
 use thiserror::Error;
 use tokio::process::Command;
 use watchexec::{
@@ -33,5 +35,7 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
         Err(error) => return error.into(),
     };
 
-    WatchError::Exit(status)
+    runtime_config.command(command);
+
+    WatchError::Exit(ExitStatus::)
 }
