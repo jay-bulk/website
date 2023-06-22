@@ -1,8 +1,8 @@
-use std::{convert::Infallible, process::ExitStatus};
+use std::convert::Infallible;
 
 use async_fn_stream::fn_stream;
 use thiserror::Error;
-use tokio::{process::Command, task::JoinError};
+use tokio::task::JoinError;
 use watchexec::{
     config::{InitConfig, RuntimeConfig},
     error::CriticalError,
@@ -41,9 +41,9 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
     };
 
     let stream = fn_stream(|emitter| async {
-        runtime_config.on_action(move |action| async move {
-            emitter.emit(action);
-            Result::<(), Infallible>::Ok(())
+        runtime_config.on_action(move |action| {
+            return emitter.emit(());
+            //Result::<(), Infallible>::Ok(())
         });
     });
 
