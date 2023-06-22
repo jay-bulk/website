@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
 use async_fn_stream::fn_stream;
-use futures_util::FutureExt;
+use futures_util::{FutureExt, select};
 use thiserror::Error;
 use tokio::task::JoinError;
 use watchexec::{
@@ -42,13 +42,21 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
     };
 
     let stream = fn_stream(|emitter| async {
-        runtime_config.on_action(move |action| {
-            return emitter.emit(()).map(|s| Result::<(), Infallible>::Ok(()));
-        });
+        runtime_config
+            .on_action(move |_action| emitter.emit(()).map(|s| Result::<(), Infallible>::Ok(())));
     });
 
-    match watchexec.main().await {
+
+
+    let main = watchexec.main();
+
+    select! {
+
+    }
+
+    match main.await {
         Ok(_) => WatchError::UnexpectedTermination,
         Err(error) => error.into(),
-    }
+    };
+
 }
