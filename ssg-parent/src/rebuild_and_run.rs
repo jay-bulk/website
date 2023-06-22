@@ -1,5 +1,6 @@
 use std::{convert::Infallible, process::ExitStatus};
 
+use async_fn_stream::fn_stream;
 use thiserror::Error;
 use tokio::{process::Command, task::JoinError};
 use watchexec::{
@@ -23,6 +24,7 @@ pub enum WatchError {
 }
 
 pub async fn watch_for_changes_and_rebuild() -> WatchError {
+
     let mut init_config = InitConfig::default();
 
     init_config.on_error(|error: ErrorHook| async move {
@@ -38,6 +40,10 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
         Ok(watchexec) => watchexec,
         Err(error) => return error.into(),
     };
+
+    let stream = fn_stream(|emitter| async {
+
+    });
 
     runtime_config.on_action(|action| async { Result::<(), Infallible>::Ok(()) });
 
