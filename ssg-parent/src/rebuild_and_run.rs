@@ -24,7 +24,6 @@ pub enum WatchError {
 }
 
 pub async fn watch_for_changes_and_rebuild() -> WatchError {
-
     let mut init_config = InitConfig::default();
 
     init_config.on_error(|error: ErrorHook| async move {
@@ -42,10 +41,11 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
     };
 
     let stream = fn_stream(|emitter| async {
-
+        runtime_config.on_action(move |action| async move {
+            emitter.emit(action);
+            Result::<(), Infallible>::Ok(())
+        });
     });
-
-    runtime_config.on_action(|action| async { Result::<(), Infallible>::Ok(()) });
 
     match watchexec.main().await {
         Ok(_) => WatchError::UnexpectedTermination,
