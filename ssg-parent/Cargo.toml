@@ -16,4 +16,5 @@ thiserror = "1.0.38"
 # TODO less features
 tokio = { version = "1.21.0", features = ["fs", "tokio-macros", "full"] }
 url = "2.3.1"
+watchexec = "2.3.0"
 
