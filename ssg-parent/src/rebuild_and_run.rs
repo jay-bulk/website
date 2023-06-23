@@ -4,6 +4,7 @@ use thiserror::Error;
 use tokio::task::JoinError;
 use watchexec::{
     action::{Action, Outcome},
+    command::Command,
     config::{InitConfig, RuntimeConfig},
     error::CriticalError,
     ErrorHook, Watchexec,
@@ -35,9 +36,38 @@ pub async fn watch_for_changes_and_rebuild() -> WatchError {
 
     runtime_config.pathset(["builder"]);
 
+    runtime_config.command(Command::Exec {
+        prog: "cargo".into(),
+        args: vec!["run".into()],
+    });
+
     runtime_config.on_action(move |action: Action| {
-        use Outcome::*;
-        action.outcome(Outcome::if_running(Outcome::both(Stop, Start), Start));
+        let process_completion = action
+            .events
+            .iter()
+            .find_map(|event| {
+                event
+                    .tags
+                    .iter()
+                    .find_map(|tag| {
+                        if let watchexec::event::Tag::ProcessCompletion(process_completion) = tag {
+                            Some(process_completion)
+                        } else {
+                            None
+                        }
+                    })
+                    .copied()
+            })
+            .flatten();
+
+        if let Some(process_completion) = process_completion {
+            dbg!(process_completion);
+        };
+
+        action.outcome(Outcome::if_running(
+            Outcome::both(Outcome::Stop, Outcome::Start),
+            Outcome::Start,
+        ));
 
         async { Result::<(), Infallible>::Ok(()) }
     });
