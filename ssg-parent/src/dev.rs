@@ -19,7 +19,7 @@ pub enum DevError {
 pub async fn dev<O: AsRef<Utf8Path>>(
     launch_browser: bool,
     output_dir: O,
-    post_build: fn () ->BoxFuture<'static, Result<(), Box<dyn std::error::Error>>>,
+    post_build: fn() -> BoxFuture<'static, Result<(), Box<dyn std::error::Error>>>,
 ) -> DevError {
     tokio::select! {
         error = watch_for_changes_and_rebuild() => { DevError::Watch(error) },

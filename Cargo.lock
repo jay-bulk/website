@@ -8,10 +8,12 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "builder",
+ "camino",
  "cargo-watch",
  "chrono",
  "clap 4.2.0",
  "console-subscriber",
+ "futures",
  "indexmap",
  "once_cell",
  "serde",
