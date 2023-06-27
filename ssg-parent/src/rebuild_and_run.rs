@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use async_fn_stream::try_fn_stream;
-use futures::TryStreamExt;
+use futures::{future::BoxFuture, TryStreamExt};
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use thiserror::Error;
 use tokio::{
@@ -19,7 +19,9 @@ pub enum WatchError {
 
 const BUILDER_CRATE_NAME: &str = "builder";
 
-pub async fn watch_for_changes_and_rebuild() -> WatchError {
+pub async fn watch_for_changes_and_rebuild(
+    post_build: impl FnMut() -> BoxFuture<'static, Result<(), Box<dyn std::error::Error>>>,
+) -> WatchError {
     let cargo_run_builder_process = match cargo_run_builder() {
         Ok(cargo_run_builder_process) => cargo_run_builder_process,
         Err(error) => return error.into(),
