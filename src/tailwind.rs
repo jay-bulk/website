@@ -35,12 +35,21 @@ pub(crate) fn execute() -> BoxFuture<'static, Result<(), Box<dyn std::error::Err
                 .as_ref(),
             ])
             .output()
-            .await
-            .map_err(|e: std::io::Error| -> Box<dyn std::error::Error> { Box::new(e) })?;
+            .await;
 
-        stdout().write_all(&output.stderr)?;
+        let output = match output {
+            Ok(output) => output,
+            Err(error) => return Box::new(error),
+        };
 
-        ensure!(output.status.success());
+        if let Err(error) = stdout().write_all(&output.stderr) {
+            return Box::new(error);
+        }
+
+        if !output.status.success() {
+            return TailwindError(output.status);
+        }
+
         Ok(())
     }
     .boxed()
