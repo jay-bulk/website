@@ -35,7 +35,8 @@ pub(crate) fn execute() -> BoxFuture<'static, Result<(), Box<dyn std::error::Err
                 .as_ref(),
             ])
             .output()
-            .await?;
+            .await
+            .map_err(|e: std::io::Error| -> Box<dyn std::error::Error> { Box::new(e) })?;
 
         stdout().write_all(&output.stderr)?;
 
