@@ -15,7 +15,7 @@ pub enum DevError {
     Io(std::io::Error),
 }
 
-pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
+pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O,post_build: fn()) -> DevError {
     tokio::select! {
         error = watch_for_changes_and_rebuild() => { DevError::Watch(error) },
         error = start_development_web_server(launch_browser, Utf8PathBuf::from(output_dir.as_ref())) => { DevError::Io(error) },
