@@ -16,7 +16,6 @@ mod pages;
 mod relative_path;
 mod style;
 mod syn_helpers;
-mod tailwind;
 mod url;
 
 use builder::OUTPUT_DIR;
@@ -34,8 +33,6 @@ async fn main() -> Result<()> {
     });
 
     generation_task.await?;
-
-    tailwind::execute().await?;
 
     Ok(())
 }

@@ -1,5 +1,7 @@
 #![warn(clippy::all, clippy::pedantic)]
 
+mod tailwind;
+
 use anyhow::bail;
 use builder::OUTPUT_DIR;
 use clap::{Parser, Subcommand};
@@ -38,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.mode.unwrap_or_default() {
-        Mode::Dev { open } => bail!(dev(open, OUTPUT_DIR.as_path()).await),
+        Mode::Dev { open } => bail!(dev(open, OUTPUT_DIR.as_path(), tailwind::execute).await),
         Mode::PrintOutputDir => print!("{}", OUTPUT_DIR.as_os_str().to_str().unwrap()),
     }
 
