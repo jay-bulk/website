@@ -1,6 +1,5 @@
 use std::io::{stdout, Write};
 
-use anyhow::ensure;
 use camino::Utf8PathBuf;
 use futures::{future::BoxFuture, FutureExt};
 use tokio::process::Command;
@@ -39,15 +38,15 @@ pub(crate) fn execute() -> BoxFuture<'static, Result<(), Box<dyn std::error::Err
 
         let output = match output {
             Ok(output) => output,
-            Err(error) => return Box::new(error),
+            Err(error) => return Err(Box::new(error) as Box<dyn std::error::Error>),
         };
 
         if let Err(error) = stdout().write_all(&output.stderr) {
-            return Box::new(error);
+            return Err(Box::new(error));
         }
 
         if !output.status.success() {
-            return TailwindError(output.status);
+            return Err("tailwind failed".into());
         }
 
         Ok(())

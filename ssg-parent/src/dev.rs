@@ -1,5 +1,5 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use futures::{future::BoxFuture, Future};
+use futures::future::BoxFuture;
 use thiserror::Error;
 
 use crate::{
