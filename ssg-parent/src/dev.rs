@@ -33,7 +33,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         None => return DevError::NoFreePort,
     };
 
-    let server_task = live_server::listen("localhost", port, root);
+    let server_task = live_server::listen("localhost", port, output_dir.as_path());
 
     let inputs = Inputs {
         server_task,
