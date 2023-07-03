@@ -4,7 +4,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
     future::BoxFuture,
     stream::{self, BoxStream},
-    Stream,
+    FutureExt, Stream,
 };
 use portpicker::Port;
 use thiserror::Error;
@@ -33,7 +33,24 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         None => return DevError::NoFreePort,
     };
 
-    let server_task = live_server::listen("localhost", port, output_dir.as_path());
+    let server_task = live_server::listen("localhost", port, output_dir.as_path())
+        .map(|result| result.expect_err("unreachable"))
+        .boxed();
+
+    let builder_crate_fs_change = try_fn_stream(|emitter| async move {
+        let (sender, mut receiver) = mpsc::channel(1);
+
+        let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
+            sender.blocking_send(result).unwrap();
+        })?;
+
+        watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
+
+        loop {
+            let event = receiver.recv().await.unwrap()?;
+            emitter.emit(event).await;
+        }
+    });
 
     let inputs = Inputs {
         server_task,
