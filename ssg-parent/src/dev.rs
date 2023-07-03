@@ -25,6 +25,7 @@ pub enum DevError {
 
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
+    
 
     let inputs = Inputs {
         server_error,
@@ -58,7 +59,7 @@ struct Inputs {
 struct Outputs {
     builder_invocation: BoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
-    stderr: BoxFuture<>,
+    stderr: BoxStream<'static, String>,
     error: BoxFuture<'static, DevError>,
 }
 
