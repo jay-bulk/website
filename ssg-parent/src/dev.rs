@@ -29,6 +29,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 }
 
 struct Inputs {
+    server_error: BoxFuture<'static, std::io::Error>,
     port: Port,
     builder_crate_fs_change: BoxStream<'static, ()>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
@@ -39,6 +40,7 @@ struct Inputs {
 struct Outputs {
     builder_invocation: BoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
+    error: BoxFuture<'static, >
 }
 
 fn app(inputs: Inputs) -> Outputs {
