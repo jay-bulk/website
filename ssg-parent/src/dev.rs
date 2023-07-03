@@ -26,8 +26,10 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 }
 
 struct Inputs {
-    builder_crate_fs_change
+    builder_crate_fs_change: BoxStream<'static,()>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
+    launch_browser: bool,
+    output_dir: O,
 }
 
 struct Outputs {
