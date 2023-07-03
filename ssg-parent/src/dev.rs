@@ -58,6 +58,7 @@ struct Inputs {
 struct Outputs {
     builder_invocation: BoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
+    stderr: BoxFuture<>,
     error: BoxFuture<'static, DevError>,
 }
 
