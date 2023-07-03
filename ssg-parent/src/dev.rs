@@ -21,3 +21,5 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         error = start_development_web_server(launch_browser, Utf8PathBuf::from(output_dir.as_ref())) => { DevError::Io(error) },
     }
 }
+
+fn app(sources:Sources)
