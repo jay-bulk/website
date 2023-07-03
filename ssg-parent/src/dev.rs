@@ -21,14 +21,22 @@ pub enum DevError {
     Watch(WatchError),
     #[error(transparent)]
     Io(std::io::Error),
+    #[error("no free port")]
+    NoFreePort,
 }
 
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
-    
+
+    let port = match portpicker::pick_unused_port() {
+        Some(port) => port,
+        None => return DevError::NoFreePort,
+    };
+
+    let server_task = live_server::listen("localhost", port, root);
 
     let inputs = Inputs {
-        server_error,
+        server_task,
         port,
         builder_crate_fs_change,
         builder_termination,
@@ -48,7 +56,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 }
 
 struct Inputs {
-    server_error: BoxFuture<'static, std::io::Error>,
+    server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
     builder_crate_fs_change: BoxStream<'static, ()>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
