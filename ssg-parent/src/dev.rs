@@ -51,12 +51,14 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .try_filter_map(|event| async move {
         if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
-            Ok(Some)
+            Ok(Some(()))
         } else {
             Ok(None)
         }
     })
     .boxed();
+
+    let builder_termination_driver = 
 
     let inputs = Inputs {
         server_task,
@@ -70,7 +72,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let outputs = app(inputs);
 
     let Outputs {
-        builder_invocation,
+        re_start_builder: builder_invocation,
         launch_browser,
         error,
     } = outputs;
@@ -88,7 +90,7 @@ struct Inputs {
 }
 
 struct Outputs {
-    builder_invocation: BoxStream<'static, ()>,
+    re_start_builder: BoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
     stderr: BoxStream<'static, String>,
     error: BoxFuture<'static, DevError>,
