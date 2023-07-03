@@ -2,9 +2,11 @@ use std::process::ExitStatus;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
+    future::BoxFuture,
     stream::{self, BoxStream},
     Stream,
 };
+use portpicker::Port;
 use thiserror::Error;
 
 use crate::{
@@ -22,18 +24,21 @@ pub enum DevError {
 }
 
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
-    let outputs = app(inputs);
+    //let outputs = app(inputs);
+    todo!()
 }
 
 struct Inputs {
-    builder_crate_fs_change: BoxStream<'static,()>,
+    port: Port,
+    builder_crate_fs_change: BoxStream<'static, ()>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
     launch_browser: bool,
-    output_dir: O,
+    output_dir: Utf8PathBuf,
 }
 
 struct Outputs {
-    builder_invocation: BoxStream<'static, ()>
+    builder_invocation: BoxStream<'static, ()>,
+    launch_browser: BoxFuture<'static, Port>,
 }
 
 fn app(inputs: Inputs) -> Outputs {
