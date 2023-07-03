@@ -51,9 +51,9 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .try_filter_map(|event| async move {
         if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
-            Some(())
+            Ok(Some)
         } else {
-            None
+            Ok(None)
         }
     })
     .boxed();
