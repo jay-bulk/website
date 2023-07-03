@@ -1,21 +1,14 @@
-use std::{process::ExitStatus, path::PathBuf};
+use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
-use futures::{
-    future::BoxFuture,
-    stream::{self, BoxStream},
-    FutureExt, Stream,
-};
-use notify::{recommended_watcher, Event, Watcher};
+use futures::{future::BoxFuture, stream::BoxStream, FutureExt, StreamExt, TryStreamExt};
+use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-use crate::{
-    rebuild_and_run::{watch_for_changes_and_rebuild, WatchError},
-    server::start_development_web_server,
-};
+use crate::rebuild_and_run::WatchError;
 
 #[derive(Debug, Error)]
 #[allow(clippy::module_name_repetitions)]
@@ -55,7 +48,15 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
             let event = receiver.recv().await.unwrap()?;
             emitter.emit(event).await;
         }
-    });
+    })
+    .try_filter_map(|event| async move {
+        if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
+            Some(())
+        } else {
+            None
+        }
+    })
+    .boxed();
 
     let inputs = Inputs {
         server_task,
@@ -80,7 +81,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
-    builder_crate_fs_change: BoxStream<'static, ()>,
+    builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
     launch_browser: bool,
     output_dir: Utf8PathBuf,
