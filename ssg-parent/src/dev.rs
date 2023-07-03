@@ -1,4 +1,5 @@
 use camino::{Utf8Path, Utf8PathBuf};
+use futures::{stream, Stream};
 use thiserror::Error;
 
 use crate::{
@@ -22,7 +23,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 }
 
 struct Inputs {
-
+builder_termination:Stream<Item = 
 }
 
 struct Outputs {
