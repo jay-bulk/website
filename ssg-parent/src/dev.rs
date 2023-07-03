@@ -1,13 +1,16 @@
-use std::process::ExitStatus;
+use std::{process::ExitStatus, path::PathBuf};
 
+use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
     future::BoxFuture,
     stream::{self, BoxStream},
     FutureExt, Stream,
 };
+use notify::{recommended_watcher, Event, Watcher};
 use portpicker::Port;
 use thiserror::Error;
+use tokio::sync::mpsc;
 
 use crate::{
     rebuild_and_run::{watch_for_changes_and_rebuild, WatchError},
@@ -24,6 +27,8 @@ pub enum DevError {
     #[error("no free port")]
     NoFreePort,
 }
+
+const BUILDER_CRATE_NAME: &str = "builder";
 
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
