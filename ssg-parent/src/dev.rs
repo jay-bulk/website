@@ -24,9 +24,26 @@ pub enum DevError {
 }
 
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
-    let inputs = Inputs { server_error: (), port: (), builder_crate_fs_change: (), builder_termination: (), launch_browser: (), output_dir: () }
+    let output_dir = output_dir.as_ref().to_owned();
+
+    let inputs = Inputs {
+        server_error,
+        port,
+        builder_crate_fs_change,
+        builder_termination,
+        launch_browser,
+        output_dir,
+    };
+
     let outputs = app(inputs);
-    todo!()
+
+    let Outputs {
+        builder_invocation,
+        launch_browser,
+        error,
+    } = outputs;
+
+    error.await
 }
 
 struct Inputs {
@@ -41,7 +58,7 @@ struct Inputs {
 struct Outputs {
     builder_invocation: BoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
-    error: BoxFuture<'static, DevError >,
+    error: BoxFuture<'static, DevError>,
 }
 
 fn app(inputs: Inputs) -> Outputs {
