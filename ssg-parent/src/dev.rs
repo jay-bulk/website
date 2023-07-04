@@ -61,6 +61,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let (mut builder_driver, builder_termination) = BuilderDriver::new();
 
+    let (mut browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
+
     let inputs = Inputs {
         server_task,
         port,
@@ -121,6 +123,19 @@ impl BuilderDriver {
     }
 
     fn init(&mut self, re_start_builder: impl Stream<Item = ()>) {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+struct BrowserLaunchDriver;
+
+impl BrowserLaunchDriver {
+    fn new() -> (Self, BoxStream<'static, Result<(), std::io::Error>>) {
+        todo!()
+    }
+
+    fn init(&mut self, launch_browser: impl Stream<Item = ()>) {
         todo!()
     }
 }
