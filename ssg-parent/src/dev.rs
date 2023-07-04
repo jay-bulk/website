@@ -2,7 +2,9 @@ use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
-use futures::{future::BoxFuture, stream::BoxStream, FutureExt, Stream, StreamExt, TryStreamExt};
+use futures::{
+    future::BoxFuture, stream::BoxStream, Future, FutureExt, Stream, StreamExt, TryStreamExt,
+};
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 use reqwest::Url;
@@ -59,9 +61,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (mut builder_driver, builder_termination) = BuilderDriver::new();
-
-    let (mut browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
+    let (builder_driver, builder_termination) = BuilderDriver::new();
+    let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
 
     let inputs = Inputs {
         server_task,
@@ -83,14 +84,11 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     } = outputs;
 
     builder_driver.init(re_start_builder);
+    browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
-    let browser_launch = launch_browser.map(|port| {
-        let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
-        open::that(url.as_str())
-    });
-
-    todo!()
+    
+    app_error.await
 }
 
 struct Inputs {
@@ -135,7 +133,7 @@ impl BrowserLaunchDriver {
         todo!()
     }
 
-    fn init(&mut self, launch_browser: impl Stream<Item = ()>) {
+    fn init(&mut self, launch_browser: impl Future<Output = Port>) {
         todo!()
     }
 }
