@@ -3,7 +3,7 @@ use std::{path::PathBuf, process::ExitStatus};
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
-    future::BoxFuture, stream::BoxStream, Future, FutureExt, Stream, StreamExt, TryStreamExt,
+    future::BoxFuture, stream::BoxStream, Future, FutureExt, Stream, StreamExt, TryStreamExt, select,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -87,7 +87,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
-    
+    select! {eprintln_task}
     app_error.await
 }
 
