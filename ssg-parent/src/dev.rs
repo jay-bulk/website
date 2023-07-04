@@ -86,8 +86,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         open::that(url.as_str())
     });
 
-    let eprintln_task
-
+    let eprintln_task = stderr.for_each(|message| async { eprintln!("{}", message) });
     todo!()
 }
 
