@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
-use futures::{future::BoxFuture, stream::BoxStream, FutureExt, StreamExt, TryStreamExt};
+use futures::{future::BoxFuture, stream::BoxStream, FutureExt, Stream, StreamExt, TryStreamExt};
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 use thiserror::Error;
@@ -31,7 +31,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         None => return DevError::NoFreePort,
     };
 
-    let server_task = live_server::listen("localhost", port, output_dir.as_path())
+    let server_task = live_server::listen("localhost", port, output_dir.as_std_path().to_owned())
         .map(|result| result.expect_err("unreachable"))
         .boxed();
 
@@ -58,8 +58,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let mut builder_driver = BuilderDriver::default();
-    let builder_termination = builder_driver.output();
+    let (builder_driver, builder_termination) = BuilderDriver::new();
 
     let inputs = Inputs {
         server_task,
@@ -79,7 +78,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         stderr,
     } = outputs;
 
-    builder_driver.input(re_start_builder);
+    builder_driver.init(re_start_builder);
 
     error.await
 }
@@ -104,9 +103,15 @@ fn app(inputs: Inputs) -> Outputs {
     todo!()
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct BuilderDriver;
 
 impl BuilderDriver {
-    fn output()
+    fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
+        todo!()
+    }
+
+    fn init(&mut self, re_start_builder: impl Stream<Item = ()>) {
+        todo!()
+    }
 }
