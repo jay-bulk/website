@@ -109,7 +109,6 @@ struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
-    builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
     builder_child: BoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
@@ -117,7 +116,7 @@ struct Inputs {
 }
 
 struct Outputs {
-    re_start_builder: BoxStream<'static, ()>,
+    re_start_builder: BoxStream<'static, Child>,
     launch_browser: BoxFuture<'static, Port>,
     stderr: BoxStream<'static, String>,
     error: BoxFuture<'static, DevError>,
@@ -152,10 +151,10 @@ impl BuilderDriver {
         (builder_driver, stream)
     }
 
-    async fn init(self, re_start_builder: impl Stream<Item = ()>) {
+    async fn init(self, re_start_builder: impl Stream<Item = Child>) {
         re_start_builder
-            .map(move |_| {
-                let child =  
+            .then(|child| async move {
+                child.kill().await; 
             })
             .try_for_each()
             .await;
