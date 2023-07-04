@@ -1784,6 +1784,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 
 [[package]]
+name = "future_handles"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d541e3afa1bfc9c7c20ddeca3059597544b5c475e07a8c2eb90fc7e0b168c996"
+dependencies = [
+ "futures",
+ "thiserror",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4193,6 +4203,7 @@ dependencies = [
  "async-trait",
  "camino",
  "colored",
+ "future_handles",
  "futures",
  "live-server",
  "notify 6.0.1",

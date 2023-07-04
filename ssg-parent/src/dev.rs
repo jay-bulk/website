@@ -2,6 +2,7 @@ use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
+use future_handles::unsync::CompleteHandle;
 use futures::{
     future::{BoxFuture, Remote, RemoteHandle},
     select,
@@ -133,14 +134,12 @@ impl BuilderDriver {
     }
 }
 
-struct BrowserLaunchDriver(Remote<BoxFuture<'static, Result<(), std::io::Error>>>);
+struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl BrowserLaunchDriver {
-    fn new() -> (Self, RemoteHandle<Result<(), std::io::Error>>) {
-        (
-            Self(sender),
-            receiver.recv().map(|option| option.unwrap()).boxed(),
-        )
+    fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
+        let (future, handle) = future_handles::sync::create();
+        (Self(handle), future.map(|option| option.unwrap()).boxed())
     }
 
     async fn init(&mut self, launch_browser: impl Future<Output = Port>) {
