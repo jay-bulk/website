@@ -77,11 +77,10 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         stderr,
     } = outputs;
 
-    builder_driver.init(re_start_builder);
+    builder_driver.init(re_start_builder);    
 
-    let error = select! {
-        error = launch_browser => 
-    }
+    let browser_launch = launch_browser.map(|port|open::)
+    
 
     error
 }
