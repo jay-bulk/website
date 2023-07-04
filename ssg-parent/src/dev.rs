@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
-use futures::{future::BoxFuture, stream::BoxStream, FutureExt, Stream, StreamExt, TryStreamExt};
+use futures::{future::BoxFuture, stream::BoxStream, FutureExt, Stream, StreamExt, TryStreamExt, select};
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 use thiserror::Error;
@@ -23,16 +23,10 @@ pub enum DevError {
 
 const BUILDER_CRATE_NAME: &str = "builder";
 
-///# Panics
-/// 
-
+#[allow(clippy::missing_panics_doc)]
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
-
-    let port = match portpicker::pick_unused_port() {
-        Some(port) => port,
-        None => return DevError::NoFreePort,
-    };
+    let Some(port) = portpicker::pick_unused_port() else { return DevError::NoFreePort };
 
     let server_task = live_server::listen("localhost", port, output_dir.as_std_path().to_owned())
         .map(|result| result.expect_err("unreachable"))
@@ -42,7 +36,9 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         let (sender, mut receiver) = mpsc::channel(1);
 
         let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            sender.blocking_send(result).unwrap();
+            sender
+                .blocking_send(result)
+                .expect("this closure gets sent to a blocking context");
         })?;
 
         watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
@@ -83,7 +79,11 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     builder_driver.init(re_start_builder);
 
-    error.await
+    let error = select! {
+        error = launch_browser => 
+    }
+
+    error
 }
 
 struct Inputs {
