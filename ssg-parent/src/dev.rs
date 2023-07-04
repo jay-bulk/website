@@ -3,8 +3,8 @@ use std::{path::PathBuf, process::ExitStatus};
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
-    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream,
-    StreamExt, TryStreamExt,
+    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream, StreamExt,
+    TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -136,14 +136,16 @@ struct BrowserLaunchDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl BrowserLaunchDriver {
     fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
-        let (sender,mut receiver) = mpsc::channel(1);
+        let (sender, mut receiver) = mpsc::channel(1);
         (
             Self(sender),
             receiver.recv().map(|option| option.unwrap()).boxed(),
         )
     }
 
-    fn init(&mut self, launch_browser: impl Future<Output = Port>) {
-        let url = Url::parse(&format!("http://{LOCALHOST}:{}", *LOCAL_DEV_PORT)).unwrap();
+    async fn init(&mut self, launch_browser: impl Future<Output = Port>) {
+        let port = launch_browser.await;
+        let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+        self.0.send(open::that(url.as_str())).await;
     }
 }
