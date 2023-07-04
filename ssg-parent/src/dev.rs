@@ -3,11 +3,12 @@ use std::{path::PathBuf, process::ExitStatus};
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
-    future::BoxFuture, stream::BoxStream, Future, FutureExt, Stream, StreamExt, TryStreamExt, select,
+    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream, StreamExt,
+    TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
-use reqwest::Url;
+
 use thiserror::Error;
 use tokio::sync::mpsc;
 
@@ -61,8 +62,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_termination) = BuilderDriver::new();
-    let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
+    let (mut builder_driver, builder_termination) = BuilderDriver::new();
+    let (mut browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
 
     let inputs = Inputs {
         server_task,
@@ -70,8 +71,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         builder_crate_fs_change,
         builder_termination,
         launch_browser,
+        browser_launch,
         output_dir,
-        browser_launch: todo!(),
     };
 
     let outputs = app(inputs);
@@ -87,8 +88,12 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
-    select! {eprintln_task}
-    app_error.await
+    let app_error = select! {
+        app_error = app_error.fuse() => app_error,
+        _ = eprintln_task.fuse() => unreachable!(),
+    };
+
+    app_error
 }
 
 struct Inputs {
@@ -129,7 +134,7 @@ impl BuilderDriver {
 struct BrowserLaunchDriver;
 
 impl BrowserLaunchDriver {
-    fn new() -> (Self, BoxStream<'static, Result<(), std::io::Error>>) {
+    fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
         todo!()
     }
 
