@@ -23,6 +23,9 @@ pub enum DevError {
 
 const BUILDER_CRATE_NAME: &str = "builder";
 
+///# Panics
+/// 
+
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
 
@@ -58,7 +61,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_termination) = BuilderDriver::new();
+    let (mut builder_driver, builder_termination) = BuilderDriver::new();
 
     let inputs = Inputs {
         server_task,
