@@ -88,12 +88,14 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         stderr,
     } = outputs;
 
-    builder_driver.init(re_start_builder);
-    browser_launch_driver.init(launch_browser);
+    let builder_driver_task = builder_driver.init(re_start_builder);
+    let browser_launcher_task = browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
     let app_error = select! {
-        app_error = app_error.fuse() => app_error,
+        error = app_error.fuse() => error,
+        _ = browser_launcher_task.fuse() => unreachable!(),
+        _ = builder_driver_task.fuse() => unreachable!(),
         _ = eprintln_task.fuse() => unreachable!(),
     };
 
@@ -122,18 +124,20 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>> );
+struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>>);
 
 impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
-        let (sender, receiver) = mpsc::channel(1);
+        let (sender, mut receiver) = mpsc::channel(1);
         let stream = try_fn_stream(|emitter| async move {
             loop {
                 let input = receiver.recv().await.unwrap()?;
-                emitter.emit(input).await
+                emitter.emit(input).await;
             }
-        });
-        (Self, stream)
+        })
+        .boxed();
+
+        (Self(sender), stream)
     }
 
     async fn init(self, re_start_builder: impl Stream<Item = ()>) {
