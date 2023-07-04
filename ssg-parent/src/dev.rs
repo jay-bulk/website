@@ -127,9 +127,11 @@ struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>> );
 impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
         let (sender, receiver) = mpsc::channel(1);
-        let stream = fn_stream(move |emitter| {
-            //receiver;
-            emitter.emit(value)
+        let stream = try_fn_stream(|emitter| async move {
+            loop {
+                let input = receiver.recv().await.unwrap()?;
+                emitter.emit(input).await
+            }
         });
         (Self, stream)
     }
