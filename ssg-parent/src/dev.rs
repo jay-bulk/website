@@ -7,7 +7,7 @@ use futures::{
     future::{BoxFuture, Remote, RemoteHandle},
     select,
     stream::BoxStream,
-    Future, FutureExt, Stream, StreamExt, TryStreamExt,
+    Future, FutureExt, Stream, StreamExt, TryStreamExt, TryFutureExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -127,7 +127,7 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>>);
+struct BuilderDriver(mpsc::Sender<Child>);
 
 impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Child>) {
@@ -146,11 +146,12 @@ impl BuilderDriver {
     }
 
     async fn init(self, re_start_builder: impl Stream<Item = Child>) {
+        let ref mut s = self;
         re_start_builder
-            .then(|child| child.kill())
+            .then(|mut child| async move{ child.kill().await })
             .try_for_each(|_| async move {
                 let child = Self::cargo_run_builder()?;
-                self.0.send(child).await.unwrap();
+                s.0.send(child).await.unwrap();
                 Ok(())
             })
             .await;
