@@ -1790,6 +1790,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d541e3afa1bfc9c7c20ddeca3059597544b5c475e07a8c2eb90fc7e0b168c996"
 dependencies = [
  "futures",
+ "spinning_top",
  "thiserror",
 ]
 
@@ -4170,6 +4171,15 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spinning_top"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b9eb1a2f4c41445a3a0ff9abc5221c5fcd28e1f13cd7c0397706f9ac938ddb0"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "ssg-child"

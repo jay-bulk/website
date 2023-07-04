@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
-use future_handles::unsync::CompleteHandle;
+use future_handles::sync::CompleteHandle;
 use futures::{
     future::{BoxFuture, Remote, RemoteHandle},
     select,
@@ -145,6 +145,6 @@ impl BrowserLaunchDriver {
     async fn init(&mut self, launch_browser: impl Future<Output = Port>) {
         let port = launch_browser.await;
         let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
-        self.0.send(open::that(url.as_str())).await;
+        self.0.complete(open::that(url.as_str()));
     }
 }
