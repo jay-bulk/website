@@ -156,9 +156,9 @@ impl BuilderDriver {
                         async move {
                             send_task.await.unwrap();
                             Ok(())
-                        }
+                        }.boxed()
                     }
-                    Err(error) => async move { error },
+                    Err(error) => async move { Err(error) }.boxed(),
                 }
             })
             .await;
