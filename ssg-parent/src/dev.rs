@@ -13,7 +13,7 @@ use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 
 use thiserror::Error;
-use tokio::sync::mpsc;
+use tokio::{process::Child, sync::mpsc};
 use url::Url;
 
 use crate::rebuild_and_run::WatchError;
@@ -124,7 +124,10 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>>);
+struct BuilderDriver {
+    sender: mpsc::Sender<Result<ExitStatus, std::io::Error>>,
+    builder: Option<Child>,
+}
 
 impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
@@ -137,11 +140,30 @@ impl BuilderDriver {
         })
         .boxed();
 
-        (Self(sender), stream)
+        let builder_driver = Self {
+            sender,
+            builder: None,
+        };
+
+        (builder_driver, stream)
     }
 
     async fn init(self, re_start_builder: impl Stream<Item = ()>) {
-        todo!()
+        re_start_builder
+            .for_each(|_| async move {
+                if self.builder.is_none() {
+                    self.builder = Self::cargo_run_builder()
+                }
+                //
+                //self.builder.
+            })
+            .await;
+    }
+
+    fn cargo_run_builder() -> Result<Child, std::io::Error> {
+        Command::new("cargo")
+            .args(["run", "--package", BUILDER_CRATE_NAME])
+            .spawn()
     }
 }
 
