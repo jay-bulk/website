@@ -1,6 +1,6 @@
 use std::{path::PathBuf, process::ExitStatus};
 
-use async_fn_stream::try_fn_stream;
+use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
@@ -126,7 +126,12 @@ struct BuilderDriver;
 
 impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
-        todo!()
+        let (sender, receiver) = mpsc::channel(1);
+        let stream = fn_stream(|emitter| move {
+            receiver
+            emitter.emit(value)
+        });
+        (Self, stream)
     }
 
     async fn init(self, re_start_builder: impl Stream<Item = ()>) {
