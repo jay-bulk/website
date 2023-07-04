@@ -58,7 +58,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let builder_termination_driver = 
+    let mut builder_driver = BuilderDriver::default();
+    let builder_termination = builder_driver.output();
 
     let inputs = Inputs {
         server_task,
@@ -72,10 +73,13 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let outputs = app(inputs);
 
     let Outputs {
-        re_start_builder: builder_invocation,
+        re_start_builder,
         launch_browser,
         error,
+        stderr,
     } = outputs;
+
+    builder_driver.input(re_start_builder);
 
     error.await
 }
@@ -98,4 +102,11 @@ struct Outputs {
 
 fn app(inputs: Inputs) -> Outputs {
     todo!()
+}
+
+#[derive(Debug, Default)]
+struct BuilderDriver;
+
+impl BuilderDriver {
+    fn output()
 }
