@@ -128,7 +128,7 @@ impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
         let (sender, receiver) = mpsc::channel(1);
         let stream = fn_stream(move |emitter| {
-            receiver
+            //receiver;
             emitter.emit(value)
         });
         (Self, stream)
