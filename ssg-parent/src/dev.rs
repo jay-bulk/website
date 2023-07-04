@@ -13,7 +13,7 @@ use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 
 use thiserror::Error;
-use tokio::{process::Child, sync::mpsc};
+use tokio::{process::{Child, Command}, sync::mpsc};
 use url::Url;
 
 use crate::rebuild_and_run::WatchError;
@@ -150,13 +150,13 @@ impl BuilderDriver {
 
     async fn init(self, re_start_builder: impl Stream<Item = ()>) {
         re_start_builder
-            .for_each(|_| async move {
-                if self.builder.is_none() {
-                    self.builder = Self::cargo_run_builder()
-                }
-                //
-                //self.builder.
-            })
+            .map(|_| async move {
+                // if self.builder.is_none() {
+                //     self.builder = Self::cargo_run_builder()
+                // }
+                Result::<(),()>::Err(())
+                // self.builder.
+            }).collect()
             .await;
     }
 
