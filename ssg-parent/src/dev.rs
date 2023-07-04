@@ -154,7 +154,9 @@ impl BuilderDriver {
     async fn init(self, re_start_builder: impl Stream<Item = ()>) {
         re_start_builder
             .map(move |_| {
-                let child = if let Some()
+                let Self { sender, builder } = self;
+                if self.builder.is_none() { self.builder = Some(Self::cargo_run_builder()?);  }
+                let child = if let Some(child) = &mut self.builder { child } 
             })
             .try_for_each()
             .await;
