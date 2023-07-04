@@ -122,12 +122,12 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver;
+struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>> );
 
 impl BuilderDriver {
     fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
         let (sender, receiver) = mpsc::channel(1);
-        let stream = fn_stream(|emitter| move {
+        let stream = fn_stream(move |emitter| {
             receiver
             emitter.emit(value)
         });
