@@ -76,10 +76,10 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         server_task,
         port,
         builder_crate_fs_change,
-        builder_termination,
         launch_browser,
         browser_launch,
         output_dir,
+        builder_child: builder_termination,
     };
 
     let outputs = app(inputs);
@@ -109,7 +109,7 @@ struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
-    builder_child: BoxStream<'static, Result<Child, std::io::Error>>,
+    builder_child: BoxStream<'static, Child>,
     launch_browser: bool,
     browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
     output_dir: Utf8PathBuf,
@@ -127,36 +127,32 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver {
-    sender: mpsc::Sender<Result<ExitStatus, std::io::Error>>,
-    builder: once_cell::unsync::Lazy<Child>,
-}
+struct BuilderDriver(mpsc::Sender<Result<ExitStatus, std::io::Error>>);
 
 impl BuilderDriver {
-    fn new() -> (Self, BoxStream<'static, Result<ExitStatus, std::io::Error>>) {
+    fn new() -> (Self, BoxStream<'static, Child>) {
         let (sender, mut receiver) = mpsc::channel(1);
-        let stream = try_fn_stream(|emitter| async move {
+        let stream = fn_stream(|emitter| async move {
             loop {
-                let input = receiver.recv().await.unwrap()?;
+                let input = receiver.recv().await.unwrap();
                 emitter.emit(input).await;
             }
         })
         .boxed();
 
-        let builder_driver = Self {
-            sender,
-            builder: once_cell::unsync::Lazy::new(|| Self::cargo_run_builder()),
-        };
+        let builder_driver = Self(sender);
 
         (builder_driver, stream)
     }
 
     async fn init(self, re_start_builder: impl Stream<Item = Child>) {
         re_start_builder
-            .then(|child| async move {
-                child.kill().await; 
+            .then(|child| child.kill())
+            .try_for_each(|_| async move {
+                let child = Self::cargo_run_builder()?;
+                self.0.send(child).await.unwrap();
+                Ok(())
             })
-            .try_for_each()
             .await;
     }
 
