@@ -68,6 +68,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         builder_termination,
         launch_browser,
         output_dir,
+        browser_launch: todo!(),
     };
 
     let outputs = app(inputs);
@@ -80,13 +81,13 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     } = outputs;
 
     builder_driver.init(re_start_builder);
+    let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
     let browser_launch = launch_browser.map(|port| {
         let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
         open::that(url.as_str())
     });
 
-    let eprintln_task = stderr.for_each(|message| async { eprintln!("{}", message) });
     todo!()
 }
 
@@ -96,6 +97,7 @@ struct Inputs {
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
     launch_browser: bool,
+    browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
     output_dir: Utf8PathBuf,
 }
 
