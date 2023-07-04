@@ -110,6 +110,7 @@ struct Inputs {
     port: Port,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
     builder_termination: BoxStream<'static, Result<ExitStatus, std::io::Error>>,
+    builder_child: BoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
     output_dir: Utf8PathBuf,
@@ -129,7 +130,7 @@ fn app(inputs: Inputs) -> Outputs {
 #[derive(Debug)]
 struct BuilderDriver {
     sender: mpsc::Sender<Result<ExitStatus, std::io::Error>>,
-    builder: Option<Child>,
+    builder: once_cell::unsync::Lazy<Child>,
 }
 
 impl BuilderDriver {
@@ -145,7 +146,7 @@ impl BuilderDriver {
 
         let builder_driver = Self {
             sender,
-            builder: None,
+            builder: once_cell::unsync::Lazy::new(|| Self::cargo_run_builder()),
         };
 
         (builder_driver, stream)
@@ -154,9 +155,7 @@ impl BuilderDriver {
     async fn init(self, re_start_builder: impl Stream<Item = ()>) {
         re_start_builder
             .map(move |_| {
-                let Self { sender, builder } = self;
-                if self.builder.is_none() { self.builder = Some(Self::cargo_run_builder()?);  }
-                let child = if let Some(child) = &mut self.builder { child } 
+                let child =  
             })
             .try_for_each()
             .await;
