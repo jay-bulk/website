@@ -2,9 +2,10 @@ use std::{path::PathBuf, process::ExitStatus};
 
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
-use futures::{future::BoxFuture, stream::BoxStream, FutureExt, Stream, StreamExt, TryStreamExt, select};
+use futures::{future::BoxFuture, stream::BoxStream, FutureExt, Stream, StreamExt, TryStreamExt};
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
+use reqwest::Url;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
@@ -22,13 +23,14 @@ pub enum DevError {
 }
 
 const BUILDER_CRATE_NAME: &str = "builder";
+const LOCALHOST: &str = "localhost";
 
 #[allow(clippy::missing_panics_doc)]
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
     let Some(port) = portpicker::pick_unused_port() else { return DevError::NoFreePort };
 
-    let server_task = live_server::listen("localhost", port, output_dir.as_std_path().to_owned())
+    let server_task = live_server::listen(LOCALHOST, port, output_dir.as_std_path().to_owned())
         .map(|result| result.expect_err("unreachable"))
         .boxed();
 
@@ -73,16 +75,20 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let Outputs {
         re_start_builder,
         launch_browser,
-        error,
+        error: app_error,
         stderr,
     } = outputs;
 
-    builder_driver.init(re_start_builder);    
+    builder_driver.init(re_start_builder);
 
-    let browser_launch = launch_browser.map(|port|open::)
-    
+    let browser_launch = launch_browser.map(|port| {
+        let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+        open::that(url.as_str())
+    });
 
-    error
+    let eprintln_task
+
+    todo!()
 }
 
 struct Inputs {
