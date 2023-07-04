@@ -129,7 +129,7 @@ impl BuilderDriver {
         todo!()
     }
 
-    fn init(&mut self, re_start_builder: impl Stream<Item = ()>) {
+    async fn init(self, re_start_builder: impl Stream<Item = ()>) {
         todo!()
     }
 }
@@ -139,10 +139,10 @@ struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 impl BrowserLaunchDriver {
     fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
         let (future, handle) = future_handles::sync::create();
-        (Self(handle), future.map(|option| option.unwrap()).boxed())
+        (Self(handle), future.map(|result| result.unwrap()).boxed())
     }
 
-    async fn init(&mut self, launch_browser: impl Future<Output = Port>) {
+    async fn init(self, launch_browser: impl Future<Output = Port>) {
         let port = launch_browser.await;
         let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
         self.0.complete(open::that(url.as_str()));
