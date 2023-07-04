@@ -3,7 +3,7 @@ use std::{path::PathBuf, process::ExitStatus};
 use async_fn_stream::try_fn_stream;
 use camino::{Utf8Path, Utf8PathBuf};
 use futures::{
-    channel::mpsc, future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream,
+    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream,
     StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
@@ -11,6 +11,7 @@ use portpicker::Port;
 
 use thiserror::Error;
 use tokio::sync::mpsc;
+use url::Url;
 
 use crate::rebuild_and_run::WatchError;
 
@@ -135,10 +136,10 @@ struct BrowserLaunchDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl BrowserLaunchDriver {
     fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
-        let (sender, receiver) = mpsc::channel(1);
+        let (sender,mut receiver) = mpsc::channel(1);
         (
             Self(sender),
-            receiver.next().map(|option| option.unwrap()).boxed(),
+            receiver.recv().map(|option| option.unwrap()).boxed(),
         )
     }
 
