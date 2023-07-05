@@ -4,7 +4,7 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, StreamExt, TryStreamExt,
+    future::{BoxFuture, self}, select, stream::BoxStream, Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -170,7 +170,8 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let temp =
+    let initial = futures::stream::once(futures::future::ready(StreamOutput::RunBuilder));
+    let reaction =
         futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
             State::default(),
             |state, input| async move {
@@ -199,6 +200,8 @@ fn app(inputs: Inputs) -> Outputs {
                 Some(emit)
             },
         );
+
+    let output = initial.chain(reaction);
 
     todo!()
 }
