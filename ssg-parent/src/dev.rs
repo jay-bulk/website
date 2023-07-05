@@ -24,7 +24,7 @@ const NEVER_ENDING_STREAM: &str = "never ending stream";
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    Watch(WatchError),
+    Watch(notify::Error),
     #[error(transparent)]
     Io(std::io::Error),
     #[error("no free port")]
@@ -121,9 +121,9 @@ struct Inputs {
 }
 
 enum StreamInput {
-    ChildKilled(Result<(), std::io::Error>),
-    BuilderCrateFsChange(Result<(), notify::Error>),
-    BuilderStarted(Result<Child, std::io::Error>),
+    ChildKilled,
+    BuilderCrateFsChange,
+    BuilderStarted(Child),
 }
 
 struct Outputs {
@@ -146,9 +146,18 @@ fn app(inputs: Inputs) -> Outputs {
         output_dir,
     } = inputs;
 
-    let child_killed = child_killed.map(StreamInput::ChildKilled).boxed_local();
+    let child_killed = child_killed
+        .map(|result| match result {
+            Ok(_) => Ok(StreamInput::ChildKilled),
+            Err(error) => Err(DevError::Io(error)),
+        })
+        .boxed_local();
+
     let builder_crate_fs_change = builder_crate_fs_change
-        .map(StreamInput::BuilderCrateFsChange)
+        .map(|result| match result {
+            Ok(_) => Ok(StreamInput::BuilderCrateFsChange),
+            Err(error) => Err(DevError::Watch(error)),
+        })
         .boxed_local();
     let builder_started = builder_started
         .map(StreamInput::BuilderStarted)
