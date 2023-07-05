@@ -4,7 +4,7 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, StreamExt, TryStreamExt,
+    future::BoxFuture, select, stream::{BoxStream, LocalBoxStream}, Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -127,14 +127,14 @@ enum StreamInput {
 #[derive(Clone)]
 enum StreamOutput {
     RunBuilder,
-    KillChild(Child),
+    KillChild(Rc<Child>),
 }
 
 struct Outputs {
-    kill_child: BoxStream<'static, Child>,
-    start_builder: BoxStream<'static, ()>,
+    kill_child: LocalBoxStream<'static, Child>,
+    start_builder: LocalBoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
-    stderr: BoxStream<'static, String>,
+    stderr: LocalBoxStream<'static, String>,
     error: BoxFuture<'static, DevError>,
 }
 
@@ -215,7 +215,15 @@ fn app(inputs: Inputs) -> Outputs {
             _ => None,
         };
         futures::future::ready(child)
-    }).boxed();
+    }).boxed_local();
+
+    let launch_browser  = output.filter_map(|output|  {
+        let child = match output {
+            Ok(StreamOutput::KillChild(child)) => Some(child),
+            _ => None,
+        };
+        futures::future::ready(child)
+    }).boxed_local();
 
     Outputs {
         kill_child,
