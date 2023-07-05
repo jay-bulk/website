@@ -207,8 +207,13 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    //output
-    todo!()
+    Outputs {
+        kill_child,
+        start_builder,
+        launch_browser,
+        stderr,
+        error,
+    }
 }
 
 #[derive(Debug)]
