@@ -16,6 +16,7 @@ use tokio::{
 };
 use url::Url;
 
+
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
 #[derive(Debug, Error)]
