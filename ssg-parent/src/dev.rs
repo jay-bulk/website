@@ -77,19 +77,20 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         launch_browser,
         browser_launch,
         output_dir,
-        builder_child,
+        builder_started: builder_child,
     };
 
     let outputs = app(inputs);
 
     let Outputs {
-        re_start_builder,
         launch_browser,
         error: app_error,
         stderr,
+        kill_child,
+        start_builder,
     } = outputs;
 
-    let builder_driver_task = builder_driver.init(re_start_builder);
+    let builder_driver_task = builder_driver.init(start_builder);
     let browser_launcher_task = browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
@@ -107,14 +108,15 @@ struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
-    builder_child: BoxStream<'static, Result<Child, std::io::Error>>,
+    builder_started: BoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
     output_dir: Utf8PathBuf,
 }
 
 struct Outputs {
-    re_start_builder: BoxStream<'static, Child>,
+    kill_child: BoxStream<'static, Child>,
+    start_builder: BoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
     stderr: BoxStream<'static, String>,
     error: BoxFuture<'static, DevError>,
@@ -143,15 +145,8 @@ impl BuilderDriver {
         (builder_driver, stream)
     }
 
-    async fn init(self, re_start_builder: impl Stream<Item = Child>) {
-        re_start_builder
-            .for_each(move |child| async {
-                child.kill().await.and_then(|_| {
-                    let child = Self::cargo_run_builder();
-                    self.0.send(child)
-                });
-            })
-            .await;
+    async fn init(self, start_builder: impl Stream<Item = ()>) {
+        start_builder.for_each(|_| async blo)
     }
 
     fn cargo_run_builder() -> Result<Child, std::io::Error> {
