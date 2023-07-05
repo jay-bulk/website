@@ -120,6 +120,11 @@ struct Inputs {
     output_dir: Utf8PathBuf,
 }
 
+enum StreamInput {
+    ChildKilled(Result<(), std::io::Error>),
+    BuilderCrateFsChange(Result<(), notify::Error>),
+}
+
 struct Outputs {
     kill_child: BoxStream<'static, Child>,
     start_builder: BoxStream<'static, ()>,
@@ -128,9 +133,7 @@ struct Outputs {
     error: BoxFuture<'static, DevError>,
 }
 
-fn app(inputs: Inputs) -> Outputs {
-    
-}
+fn app(inputs: Inputs) -> Outputs {}
 
 #[derive(Debug)]
 struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
