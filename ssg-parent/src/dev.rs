@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, rc::Rc};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -8,25 +8,23 @@ use futures::{
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
-
+use shared_stream::Share;
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
     sync::mpsc,
 };
 use url::Url;
-use shared_stream::Share;
 
+const NEVER_ENDING_STREAM: &str = "never ending stream";
 
-const NEVER_ENDING_STREAM: &str = "neuse shared_stream::Share;ver ending stream";
-
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    Watch(notify::Error),
+    Watch(Rc<notify::Error>),
     #[error(transparent)]
-    Io(std::io::Error),
+    Io(Rc<std::io::Error>),
     #[error("no free port")]
     NoFreePort,
 }
@@ -129,6 +127,7 @@ enum StreamInput {
 #[derive(Clone)]
 enum StreamOutput {
     RunBuilder,
+    KillChild(Child),
 }
 
 struct Outputs {
@@ -159,21 +158,21 @@ fn app(inputs: Inputs) -> Outputs {
     let child_killed = child_killed
         .map(|result| match result {
             Ok(_) => Ok(StreamInput::ChildKilled),
-            Err(error) => Err(DevError::Io(error)),
+            Err(error) => Err(DevError::Io(Rc::new(error))),
         })
         .boxed_local();
 
     let builder_crate_fs_change = builder_crate_fs_change
         .map(|result| match result {
             Ok(_) => Ok(StreamInput::BuilderCrateFsChange),
-            Err(error) => Err(DevError::Watch(error)),
+            Err(error) => Err(DevError::Watch(Rc::new(error))),
         })
         .boxed_local();
 
     let builder_started = builder_started
         .map(|result| match result {
             Ok(child) => Ok(StreamInput::BuilderStarted(child)),
-            Err(error) => Err(DevError::Io(error)),
+            Err(error) => Err(DevError::Io(Rc::new(error))),
         })
         .boxed_local();
 
@@ -209,6 +208,11 @@ fn app(inputs: Inputs) -> Outputs {
         );
 
     let output = initial.chain(reaction).shared();
+
+    let kill_child = output.filter_map(|output| match output {
+        Ok(StreamOutput::KillChild(child)) => Some(child),
+        _ => None,
+    });
 
     Outputs {
         kill_child,
