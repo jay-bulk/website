@@ -132,6 +132,11 @@ struct Outputs {
     error: BoxFuture<'static, DevError>,
 }
 
+#[derive(Debug, Default)]
+struct State {
+    builder_child: Option<Child>,
+}
+
 fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
@@ -160,13 +165,21 @@ fn app(inputs: Inputs) -> Outputs {
 
     let builder_started = builder_started
         .map(|result| match result {
-            Ok(Child) => Ok(Streaminput::BuilderStarted),
+            Ok(child) => Ok(StreamInput::BuilderStarted(child)),
             Err(error) => Err(DevError::Io(error)),
         })
         .boxed_local();
 
-    let stream_input =
-        futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]);
+    let temp =
+        futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
+            State::default(),
+            |mut state, input| async move {
+                //
+                Some(state)
+            },
+        );
+
+    todo!()
 }
 
 #[derive(Debug)]
