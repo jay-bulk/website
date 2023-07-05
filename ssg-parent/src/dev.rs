@@ -123,6 +123,7 @@ struct Inputs {
 enum StreamInput {
     ChildKilled(Result<(), std::io::Error>),
     BuilderCrateFsChange(Result<(), notify::Error>),
+    BuilderStarted(Result<Child, std::io::Error>),
 }
 
 struct Outputs {
@@ -133,7 +134,18 @@ struct Outputs {
     error: BoxFuture<'static, DevError>,
 }
 
-fn app(inputs: Inputs) -> Outputs {}
+fn app(inputs: Inputs) -> Outputs {
+    let Inputs {
+        server_task,
+        port,
+        child_killed,
+        builder_crate_fs_change,
+        builder_started,
+        launch_browser,
+        browser_launch,
+        output_dir,
+    } = inputs;
+}
 
 #[derive(Debug)]
 struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
