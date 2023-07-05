@@ -148,18 +148,19 @@ impl BuilderDriver {
             .then(|mut child| async move { child.kill().await })
             .try_for_each(move |_| {
                 let child = Self::cargo_run_builder();
-                match child {
+                let pin = match child {
                     Ok(child) => {
-                        todo!()
-                        //let send_task = self.0.send(child);
-                        //async move {
-                        //    send_task.await.unwrap();
-                        //    Ok(())
-                        //}
-                        //.boxed()
+                        let send_task = self.0.send(child);
+
+                        async move {
+                            send_task.await.unwrap();
+                            Ok(())
+                        }
+                        .boxed()
                     }
                     Err(error) => async move { Err(error) }.boxed(),
-                }
+                };
+                async { todo!() }
             })
             .await;
     }
