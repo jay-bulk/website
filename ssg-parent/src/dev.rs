@@ -4,7 +4,10 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::BoxFuture, select, stream::{BoxStream, LocalBoxStream}, Future, FutureExt, StreamExt, TryStreamExt,
+    future::BoxFuture,
+    select,
+    stream::{BoxStream, LocalBoxStream},
+    Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -207,23 +210,22 @@ fn app(inputs: Inputs) -> Outputs {
             },
         );
 
-    let output = initial.chain(reaction).shared();
+    let (kill_child_sender, kill_child_receiver) = mpsc::channel(1);
 
-    let kill_child = output.filter_map(|output|  {
-        let child = match output {
-            Ok(StreamOutput::KillChild(child)) => Some(child),
-            _ => None,
-        };
-        futures::future::ready(child)
-    }).boxed_local();
+    let output = initial.chain(reaction).for_each(|output| async move {
+        match output {
+            Ok(_) => todo!(),
+            Err(_) => todo!(),
+        }
+    });
 
-    let launch_browser  = output.filter_map(|output|  {
-        let child = match output {
-            Ok(StreamOutput::KillChild(child)) => Some(child),
-            _ => None,
-        };
-        futures::future::ready(child)
-    }).boxed_local();
+    let kill_child = fn_stream(|emitter| async {
+        loop {
+            let value = kill_child_receiver.recv().await.unwrap();
+            emitter.emit(value).await;
+        }
+    })
+    .boxed_local();
 
     Outputs {
         kill_child,
