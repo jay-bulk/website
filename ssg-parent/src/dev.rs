@@ -173,9 +173,30 @@ fn app(inputs: Inputs) -> Outputs {
     let temp =
         futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
             State::default(),
-            |mut state, input| async move {
-                //
-                Some(true)
+            |state, input| async move {
+                let emit = 'emit: {
+                    let input = match input {
+                        Ok(input) => input,
+                        Err(error) => break 'emit error,
+                    };
+
+                    match input {
+                        StreamInput::ChildKilled => {
+                            //
+                            todo!()
+                        },
+                        StreamInput::BuilderCrateFsChange => {
+                            //
+                            todo!()
+                        },
+                        StreamInput::BuilderStarted(_) => {
+                            //
+                            todo!()
+                        },
+                    }
+                };
+
+                Some(emit)
             },
         );
 
