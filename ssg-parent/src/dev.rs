@@ -69,6 +69,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     .boxed();
 
     let (builder_driver, builder_child) = BuilderDriver::new();
+    let (child_killer_driver, child_killed) = ChildKillerDriver::new();
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
 
     let inputs = Inputs {
@@ -79,7 +80,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         browser_launch,
         output_dir,
         builder_started: builder_child,
-        child_killed
+        child_killed,
     };
 
     let outputs = app(inputs);
@@ -93,13 +94,15 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     } = outputs;
 
     let builder_driver_task = builder_driver.init(start_builder);
+    let child_killer_task = child_killer_driver.init(kill_child);
     let browser_launcher_task = browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
     let app_error = select! {
         error = app_error.fuse() => error,
-        _ = browser_launcher_task.fuse() => unreachable!(),
         _ = builder_driver_task.fuse() => unreachable!(),
+        _ = child_killer_task.fuse() => unreachable!(),
+        _ = browser_launcher_task.fuse() => unreachable!(),
         _ = eprintln_task.fuse() => unreachable!(),
     };
 
@@ -109,7 +112,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
-    child_killed: BoxStream<'static, ()>,
+    child_killed: BoxStream<'static, Result<(), std::io::Error>>,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
     builder_started: BoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
@@ -181,7 +184,16 @@ impl ChildKillerDriver {
 
         (child_killer_driver, stream)
     }
+
+    async fn init(self, mut kill_child: BoxStream<'static, Child>) {
+        loop {
+            let mut child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
+            let result = child.kill().await;
+            self.0.send(result).await.unwrap();
+        }
+    }
 }
+
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl BrowserLaunchDriver {
@@ -196,4 +208,3 @@ impl BrowserLaunchDriver {
         self.0.complete(open::that(url.as_str()));
     }
 }
-
