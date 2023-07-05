@@ -12,11 +12,13 @@ use portpicker::Port;
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
-    sync::{mpsc::{self, Sender}, watch::Sender},
+    sync::mpsc,
 };
 use url::Url;
 
 use crate::rebuild_and_run::WatchError;
+
+const NEVER_ENDING_STREAM: &str = "never ending stream";
 
 #[derive(Debug, Error)]
 #[allow(clippy::module_name_repetitions)]
@@ -77,6 +79,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         browser_launch,
         output_dir,
         builder_started: builder_child,
+        child_killed: todo!(),
     };
 
     let outputs = app(inputs);
@@ -148,8 +151,8 @@ impl BuilderDriver {
     async fn init(self, mut start_builder: BoxStream<'static, ()>) {
         loop {
             start_builder.next().await.unwrap();
-            let Child = Self::cargo_run_builder();
-            self.0.send(Child).await.unwrap();
+            let child = Self::cargo_run_builder();
+            self.0.send(child).await.unwrap();
         }
     }
 
@@ -163,8 +166,20 @@ impl BuilderDriver {
 struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl ChildKillerDriver {
-    fn new() -> (Self, BoxStream<'static, Result<(),  std::io::Error>>) {
-        
+    fn new() -> (Self, BoxStream<'static, Result<(), std::io::Error>>) {
+        let (sender, mut receiver) = mpsc::channel(1);
+
+        let stream = fn_stream(|emitter| async move {
+            loop {
+                let value = receiver.recv().await.expect(NEVER_ENDING_STREAM);
+                emitter.emit(value).await;
+            }
+        })
+        .boxed();
+
+        let child_killer_driver = Self(sender);
+
+        (child_killer_driver, stream)
     }
 }
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
@@ -181,3 +196,4 @@ impl BrowserLaunchDriver {
         self.0.complete(open::that(url.as_str()));
     }
 }
+
