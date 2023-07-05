@@ -111,9 +111,9 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 }
 
 enum StreamInput {
-    ChildKilled,
-    BuilderCrateFsChange,
-    BuilderStarted(Child),
+    ChildKilled(Result<(), std::io::Error>),
+    BuilderCrateFsChange(Result<(), notify::Error>),
+    BuilderStarted(Result<Child, std::io::Error>),
 }
 
 #[derive(Clone)]
@@ -174,25 +174,18 @@ fn app(inputs: Inputs) -> Outputs {
         futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
             State::default(),
             |state, input| async move {
-                let emit = 'emit: {
-                    let input = match input {
-                        Ok(input) => input,
-                        Err(error) => break 'emit Err(error),
-                    };
-
-                    match input {
-                        StreamInput::ChildKilled => {
-                            //
-                            todo!()
-                        }
-                        StreamInput::BuilderCrateFsChange => {
-                            //
-                            todo!()
-                        }
-                        StreamInput::BuilderStarted(_) => {
-                            //
-                            todo!()
-                        }
+                let emit = match input {
+                    StreamInput::ChildKilled(_) => {
+                        //
+                        todo!()
+                    }
+                    StreamInput::BuilderCrateFsChange(_) => {
+                        //
+                        todo!()
+                    }
+                    StreamInput::BuilderStarted(_) => {
+                        //
+                        todo!()
                     }
                 };
 
