@@ -12,7 +12,7 @@ use portpicker::Port;
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
-    sync::mpsc,
+    sync::{mpsc::{self, Sender}, watch::Sender},
 };
 use url::Url;
 
@@ -160,6 +160,13 @@ impl BuilderDriver {
     }
 }
 
+struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
+
+impl ChildKillerDriver {
+    fn new() -> (Self, BoxStream<'static, Result<(),  std::io::Error>>) {
+        
+    }
+}
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl BrowserLaunchDriver {
