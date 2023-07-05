@@ -4,8 +4,7 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream, StreamExt,
-    TryStreamExt,
+    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -107,6 +106,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
+    child_killed: BoxStream<'static, ()>,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
     builder_started: BoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
@@ -145,7 +145,7 @@ impl BuilderDriver {
         (builder_driver, stream)
     }
 
-    async fn init(self,mut start_builder: BoxStream<'static, ()>) {
+    async fn init(self, mut start_builder: BoxStream<'static, ()>) {
         loop {
             start_builder.next().await.unwrap();
             let Child = Self::cargo_run_builder();
