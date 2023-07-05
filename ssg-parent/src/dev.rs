@@ -174,7 +174,7 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let initial = futures::stream::once(futures::future::ready(StreamOutput::RunBuilder));
+    let initial = futures::stream::once(futures::future::ready(Ok(StreamOutput::RunBuilder)));
     let reaction =
         futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
             State::default(),
@@ -182,7 +182,7 @@ fn app(inputs: Inputs) -> Outputs {
                 let emit = 'emit: {
                     let input = match input {
                         Ok(input) => input,
-                        Err(error) => break 'emit error,
+                        Err(error) => break 'emit Err(error),
                     };
 
                     match input {
