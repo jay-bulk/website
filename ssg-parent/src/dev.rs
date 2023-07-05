@@ -79,7 +79,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         browser_launch,
         output_dir,
         builder_started: builder_child,
-        child_killed: todo!(),
+        child_killed
     };
 
     let outputs = app(inputs);
