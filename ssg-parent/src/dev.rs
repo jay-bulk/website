@@ -7,7 +7,7 @@ use futures::{
     future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream, StreamExt,
     TryStreamExt,
 };
-use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
+use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher, Error};
 use portpicker::Port;
 
 use thiserror::Error;
@@ -67,7 +67,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_termination) = BuilderDriver::new();
+    let (builder_driver, builder_child) = BuilderDriver::new();
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
 
     let inputs = Inputs {
@@ -77,7 +77,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         launch_browser,
         browser_launch,
         output_dir,
-        builder_child: builder_termination,
+        builder_child,
     };
 
     let outputs = app(inputs);
@@ -107,7 +107,7 @@ struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
     builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
-    builder_child: BoxStream<'static, Child>,
+    builder_child: BoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
     output_dir: Utf8PathBuf,
@@ -125,10 +125,10 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver(mpsc::Sender<Child>);
+struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
 
 impl BuilderDriver {
-    fn new() -> (Self, BoxStream<'static, Child>) {
+    fn new() -> (Self, BoxStream<'static, Result<Child, std::io::Error>>) {
         let (sender, mut receiver) = mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
