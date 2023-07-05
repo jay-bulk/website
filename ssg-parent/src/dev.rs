@@ -7,7 +7,7 @@ use futures::{
     future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream, StreamExt,
     TryStreamExt,
 };
-use notify::{recommended_watcher, Error, Event, EventKind, RecursiveMode, Watcher};
+use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 
 use thiserror::Error;
@@ -145,11 +145,11 @@ impl BuilderDriver {
 
     async fn init(self, re_start_builder: impl Stream<Item = Child>) {
         re_start_builder
-            .for_each(move |child| {
-
-                async {
-                    self.0.send()
-                }
+            .for_each(move |child| async {
+                child.kill().await.and_then(|_| {
+                    let child = Self::cargo_run_builder();
+                    self.0.send(child)
+                });
             })
             .await;
     }
