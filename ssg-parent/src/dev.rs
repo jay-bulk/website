@@ -16,8 +16,6 @@ use tokio::{
 };
 use url::Url;
 
-use crate::rebuild_and_run::WatchError;
-
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
 #[derive(Debug, Error)]
@@ -159,8 +157,12 @@ fn app(inputs: Inputs) -> Outputs {
             Err(error) => Err(DevError::Watch(error)),
         })
         .boxed_local();
+
     let builder_started = builder_started
-        .map(StreamInput::BuilderStarted)
+        .map(|result| match result {
+            Ok(Child) => Ok(Streaminput::BuilderStarted),
+            Err(error) => Err(DevError::Io(error)),
+        })
         .boxed_local();
 
     let stream_input =
