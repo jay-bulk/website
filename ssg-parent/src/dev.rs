@@ -209,10 +209,13 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction).shared();
 
-    let kill_child = output.filter_map(|output| match output {
-        Ok(StreamOutput::KillChild(child)) => Some(child),
-        _ => None,
-    });
+    let kill_child = output.filter_map(|output|  {
+        let child = match output {
+            Ok(StreamOutput::KillChild(child)) => Some(child),
+            _ => None,
+        };
+        futures::future::ready(child)
+    }).boxed();
 
     Outputs {
         kill_child,
