@@ -145,8 +145,12 @@ impl BuilderDriver {
         (builder_driver, stream)
     }
 
-    async fn init(self, start_builder: impl Stream<Item = ()>) {
-        start_builder.for_each(|_| async blo)
+    async fn init(self,mut start_builder: BoxStream<'static, ()>) {
+        loop {
+            start_builder.next().await.unwrap();
+            let Child = Self::cargo_run_builder();
+            self.0.send(Child).await.unwrap();
+        }
     }
 
     fn cargo_run_builder() -> Result<Child, std::io::Error> {
