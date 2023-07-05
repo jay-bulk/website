@@ -4,7 +4,7 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::{BoxFuture, self}, select, stream::BoxStream, Future, FutureExt, StreamExt, TryStreamExt,
+    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -124,6 +124,10 @@ enum StreamInput {
     BuilderStarted(Child),
 }
 
+enum StreamOutput {
+    RunBuilder,
+}
+
 struct Outputs {
     kill_child: BoxStream<'static, Child>,
     start_builder: BoxStream<'static, ()>,
@@ -185,15 +189,15 @@ fn app(inputs: Inputs) -> Outputs {
                         StreamInput::ChildKilled => {
                             //
                             todo!()
-                        },
+                        }
                         StreamInput::BuilderCrateFsChange => {
                             //
                             todo!()
-                        },
+                        }
                         StreamInput::BuilderStarted(_) => {
                             //
                             todo!()
-                        },
+                        }
                     }
                 };
 
@@ -203,6 +207,7 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
+    //output
     todo!()
 }
 
