@@ -15,9 +15,10 @@ use tokio::{
     sync::mpsc,
 };
 use url::Url;
+use shared_stream::Share;
 
 
-const NEVER_ENDING_STREAM: &str = "never ending stream";
+const NEVER_ENDING_STREAM: &str = "neuse shared_stream::Share;ver ending stream";
 
 #[derive(Debug, Error)]
 #[allow(clippy::module_name_repetitions)]
@@ -125,6 +126,7 @@ enum StreamInput {
     BuilderStarted(Child),
 }
 
+#[derive(Clone)]
 enum StreamOutput {
     RunBuilder,
 }
@@ -206,7 +208,7 @@ fn app(inputs: Inputs) -> Outputs {
             },
         );
 
-    let output = initial.chain(reaction);
+    let output = initial.chain(reaction).shared();
 
     Outputs {
         kill_child,
