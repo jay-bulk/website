@@ -145,6 +145,17 @@ fn app(inputs: Inputs) -> Outputs {
         browser_launch,
         output_dir,
     } = inputs;
+
+    let child_killed = child_killed.map(StreamInput::ChildKilled).boxed_local();
+    let builder_crate_fs_change = builder_crate_fs_change
+        .map(StreamInput::BuilderCrateFsChange)
+        .boxed_local();
+    let builder_started = builder_started
+        .map(StreamInput::BuilderStarted)
+        .boxed_local();
+
+    let stream_input =
+        futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]);
 }
 
 #[derive(Debug)]
