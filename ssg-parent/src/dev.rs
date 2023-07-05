@@ -129,7 +129,7 @@ struct Outputs {
 }
 
 fn app(inputs: Inputs) -> Outputs {
-    todo!()
+    
 }
 
 #[derive(Debug)]
@@ -199,7 +199,7 @@ struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 impl BrowserLaunchDriver {
     fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
         let (future, handle) = future_handles::sync::create();
-        (Self(handle), future.map(|result| result.unwrap()).boxed())
+        (Self(handle), future.map(Result::unwrap).boxed())
     }
 
     async fn init(self, launch_browser: impl Future<Output = Port>) {
