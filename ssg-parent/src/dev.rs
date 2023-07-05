@@ -175,7 +175,7 @@ fn app(inputs: Inputs) -> Outputs {
             State::default(),
             |mut state, input| async move {
                 //
-                Some(state)
+                Some(true)
             },
         );
 
