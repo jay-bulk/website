@@ -1,13 +1,11 @@
-use std::{path::PathBuf, process::ExitStatus};
+use std::path::PathBuf;
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::{BoxFuture, Remote, RemoteHandle},
-    select,
-    stream::BoxStream,
-    Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
+    future::BoxFuture, select, stream::BoxStream, Future, FutureExt, Stream, StreamExt,
+    TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -69,8 +67,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (mut builder_driver, builder_termination) = BuilderDriver::new();
-    let (mut browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
+    let (builder_driver, builder_termination) = BuilderDriver::new();
+    let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
 
     let inputs = Inputs {
         server_task,
@@ -152,12 +150,13 @@ impl BuilderDriver {
                 let child = Self::cargo_run_builder();
                 match child {
                     Ok(child) => {
-                        let send_task = self.0.send(child);
-                        async move {
-                            send_task.await.unwrap();
-                            Ok(())
-                        }
-                        .boxed()
+                        todo!()
+                        //let send_task = self.0.send(child);
+                        //async move {
+                        //    send_task.await.unwrap();
+                        //    Ok(())
+                        //}
+                        //.boxed()
                     }
                     Err(error) => async move { Err(error) }.boxed(),
                 }
