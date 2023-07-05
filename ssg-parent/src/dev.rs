@@ -107,17 +107,6 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     app_error
 }
 
-struct Inputs {
-    server_task: BoxFuture<'static, std::io::Error>,
-    port: Port,
-    child_killed: BoxStream<'static, Result<(), std::io::Error>>,
-    builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
-    builder_started: BoxStream<'static, Result<Child, std::io::Error>>,
-    launch_browser: bool,
-    browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
-    output_dir: Utf8PathBuf,
-}
-
 enum StreamInput {
     ChildKilled,
     BuilderCrateFsChange,
@@ -127,7 +116,18 @@ enum StreamInput {
 #[derive(Clone)]
 enum StreamOutput {
     RunBuilder,
-    KillChild(Rc<Child>),
+    KillChild(Child),
+}
+
+struct Inputs {
+    server_task: BoxFuture<'static, std::io::Error>,
+    port: Port,
+    child_killed: BoxStream<'static, Result<(), std::io::Error>>,
+    builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
+    builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
+    launch_browser: bool,
+    browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
+    output_dir: Utf8PathBuf,
 }
 
 struct Outputs {
