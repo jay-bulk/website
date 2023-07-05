@@ -159,27 +159,17 @@ fn app(inputs: Inputs) -> Outputs {
     } = inputs;
 
     let child_killed = child_killed
-        .map(|result| match result {
-            Ok(_) => Ok(StreamInput::ChildKilled),
-            Err(error) => Err(DevError::Io(Rc::new(error))),
-        })
-        .boxed_local();
+        .map(StreamInput::ChildKilled).boxed_local();
 
     let builder_crate_fs_change = builder_crate_fs_change
-        .map(|result| match result {
-            Ok(_) => Ok(StreamInput::BuilderCrateFsChange),
-            Err(error) => Err(DevError::Watch(Rc::new(error))),
-        })
+        .map(StreamInput::BuilderCrateFsChange)
         .boxed_local();
 
     let builder_started = builder_started
-        .map(|result| match result {
-            Ok(child) => Ok(StreamInput::BuilderStarted(child)),
-            Err(error) => Err(DevError::Io(Rc::new(error))),
-        })
+        .map(StreamInput::BuilderStarted)
         .boxed_local();
 
-    let initial = futures::stream::once(futures::future::ready(Ok(StreamOutput::RunBuilder)));
+    let initial = futures::stream::once(futures::future::ready(StreamOutput::RunBuilder));
     let reaction =
         futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
             State::default(),
@@ -215,7 +205,7 @@ fn app(inputs: Inputs) -> Outputs {
     let output = initial.chain(reaction).for_each(|output| async move {
         match output {
             Ok(_) => todo!(),
-            Err(_) => todo!(),
+            Err(e) => Er,
         }
     });
 
