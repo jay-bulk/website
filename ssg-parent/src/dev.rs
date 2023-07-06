@@ -4,9 +4,9 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::{self, BoxFuture, LocalBoxFuture},
+    future::{self, LocalBoxFuture},
     select,
-    stream::{self, BoxStream, LocalBoxStream},
+    stream::{self, LocalBoxStream},
     Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
@@ -121,25 +121,26 @@ enum StreamOutput {
     RunBuilder,
     KillChild(Rc<Child>),
     Stderr(String),
+    Error(DevError),
 }
 
 struct Inputs {
-    server_task: BoxFuture<'static, std::io::Error>,
+    server_task: LocalBoxFuture<'static, std::io::Error>,
     port: Port,
     child_killed: LocalBoxStream<'static, Result<(), std::io::Error>>,
     builder_crate_fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
-    browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
+    browser_launch: LocalBoxFuture<'static, Result<(), std::io::Error>>,
     output_dir: Utf8PathBuf,
 }
 
 struct Outputs {
     kill_child: LocalBoxStream<'static, Rc<Child>>,
     run_builder: LocalBoxStream<'static, ()>,
-    launch_browser: BoxFuture<'static, Port>,
+    launch_browser: LocalBoxFuture<'static, Port>,
     stderr: LocalBoxStream<'static, String>,
-    error: BoxFuture<'static, DevError>,
+    error: LocalBoxFuture<'static, DevError>,
 }
 
 #[derive(Debug, Default)]
@@ -231,6 +232,16 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
+    let error = output.clone().filter_map(|output| {
+        let output = if let StreamOutput::Error(error) = output {
+            Some(error)
+        } else {
+            None
+        };
+
+        future::ready(output)
+    });
+
     Outputs {
         kill_child,
         run_builder: start_builder,
@@ -244,7 +255,7 @@ fn app(inputs: Inputs) -> Outputs {
 struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
 
 impl BuilderDriver {
-    fn new() -> (Self, BoxStream<'static, Result<Child, std::io::Error>>) {
+    fn new() -> (Self, LocalBoxStream<'static, Result<Child, std::io::Error>>) {
         let (sender, mut receiver) = mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
@@ -277,7 +288,7 @@ impl BuilderDriver {
 struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl ChildKillerDriver {
-    fn new() -> (Self, BoxStream<'static, Result<(), std::io::Error>>) {
+    fn new() -> (Self, LocalBoxStream<'static, Result<(), std::io::Error>>) {
         let (sender, mut receiver) = mpsc::channel(1);
 
         let stream = fn_stream(|emitter| async move {
@@ -317,9 +328,9 @@ fn rc_try_unwrap_recursive<T>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'stati
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl BrowserLaunchDriver {
-    fn new() -> (Self, BoxFuture<'static, Result<(), std::io::Error>>) {
+    fn new() -> (Self, LocalBoxFuture<'static, Result<(), std::io::Error>>) {
         let (future, handle) = future_handles::sync::create();
-        (Self(handle), future.map(Result::unwrap).boxed())
+        (Self(handle), future.map(Result::unwrap).boxed_local())
     }
 
     async fn init(self, launch_browser: impl Future<Output = Port>) {
