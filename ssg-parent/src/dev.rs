@@ -135,7 +135,7 @@ struct Inputs {
 }
 
 struct Outputs {
-    kill_child: LocalBoxStream<'static, Child>,
+    kill_child: LocalBoxStream<'static, Rc<Child>>,
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
     stderr: LocalBoxStream<'static, String>,
@@ -216,7 +216,7 @@ fn app(inputs: Inputs) -> Outputs {
 
             future::ready(output)
         })
-        .boxed_Local();
+        .boxed_local();
 
     let stderr = output
         .clone()
@@ -259,7 +259,7 @@ impl BuilderDriver {
         (builder_driver, stream)
     }
 
-    async fn init(self, mut start_builder: BoxStream<'static, ()>) {
+    async fn init(self, mut start_builder: LocalBoxStream<'static, ()>) {
         loop {
             start_builder.next().await.unwrap();
             let child = Self::cargo_run_builder();
@@ -293,7 +293,7 @@ impl ChildKillerDriver {
         (child_killer_driver, stream)
     }
 
-    async fn init(self, mut kill_child: BoxStream<'static, Child>) {
+    async fn init(self, mut kill_child: LocalBoxStream<'static, rc<Child>>) {
         loop {
             let mut child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
             let result = child.kill().await;
