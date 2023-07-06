@@ -232,15 +232,24 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let error = output.clone().filter_map(|output| {
-        let output = if let StreamOutput::Error(error) = output {
-            Some(error)
-        } else {
-            None
-        };
+    let error = output
+        .filter_map(|output| {
+            let output = if let StreamOutput::Error(error) = output {
+                Some(error)
+            } else {
+                None
+            };
 
-        future::ready(output)
-    });
+            future::ready(output)
+        })
+        .select_next_some()
+        .boxed_local();
+
+    let launch_browser = if launch_browser {
+        future::ready(port).boxed_local()
+    } else {
+        future::pending().boxed_local()
+    };
 
     Outputs {
         kill_child,
