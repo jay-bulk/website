@@ -293,9 +293,14 @@ impl ChildKillerDriver {
         (child_killer_driver, stream)
     }
 
-    async fn init(self, mut kill_child: LocalBoxStream<'static, rc<Child>>) {
+    async fn init(self, mut kill_child: LocalBoxStream<'static, Rc<Child>>) {
         loop {
-            let mut child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
+            let child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
+            let child = loop {
+                if let Ok(child) = Rc::try_unwrap(child) {
+                    break child
+                }
+            };
             let result = child.kill().await;
             self.0.send(result).await.unwrap();
         }
