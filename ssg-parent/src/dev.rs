@@ -158,8 +158,7 @@ fn app(inputs: Inputs) -> Outputs {
         output_dir,
     } = inputs;
 
-    let child_killed = child_killed
-        .map(StreamInput::ChildKilled).boxed_local();
+    let child_killed = child_killed.map(StreamInput::ChildKilled).boxed_local();
 
     let builder_crate_fs_change = builder_crate_fs_change
         .map(StreamInput::BuilderCrateFsChange)
@@ -173,7 +172,7 @@ fn app(inputs: Inputs) -> Outputs {
     let reaction =
         futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
             State::default(),
-            |state, input| async move {
+            move |state, input| {
                 let emit = match input {
                     StreamInput::ChildKilled(_) => {
                         //
@@ -189,26 +188,13 @@ fn app(inputs: Inputs) -> Outputs {
                     }
                 };
 
-                Some(emit)
+                futures::future::ready(Some(emit))
             },
         );
 
-    let (kill_child_sender, kill_child_receiver) = mpsc::channel(1);
+    let output = initial.chain(reaction).shared();
 
-    let output = initial.chain(reaction).for_each(|output| async move {
-        match output {
-            Ok(_) => todo!(),
-            Err(e) => Er,
-        }
-    });
-
-    let kill_child = fn_stream(|emitter| async {
-        loop {
-            let value = kill_child_receiver.recv().await.unwrap();
-            emitter.emit(value).await;
-        }
-    })
-    .boxed_local();
+    let kill_child = output.clone().filter_map(f);
 
     Outputs {
         kill_child,
