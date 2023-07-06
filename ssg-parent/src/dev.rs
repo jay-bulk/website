@@ -199,10 +199,16 @@ fn app(inputs: Inputs) -> Outputs {
             } else {
                 None
             };
-
+        
             future::ready(child)
         })
         .boxed_local();
+
+    let start_builder = output
+        .clone()
+        .filter_map(|output|{
+            let 
+        }
 
     Outputs {
         kill_child,
