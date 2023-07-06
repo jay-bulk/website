@@ -91,10 +91,10 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         error: app_error,
         stderr,
         kill_child,
-        start_builder,
+        run_builder,
     } = outputs;
 
-    let builder_driver_task = builder_driver.init(start_builder);
+    let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_killer_driver.init(kill_child);
     let browser_launcher_task = browser_launch_driver.init(launch_browser);
     let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
@@ -119,7 +119,7 @@ enum StreamInput {
 #[derive(Clone)]
 enum StreamOutput {
     RunBuilder,
-    KillChild(Child),
+    KillChild(Rc<Child>),
     Stderr(String),
 }
 
@@ -136,7 +136,7 @@ struct Inputs {
 
 struct Outputs {
     kill_child: LocalBoxStream<'static, Child>,
-    start_builder: LocalBoxStream<'static, ()>,
+    run_builder: LocalBoxStream<'static, ()>,
     launch_browser: BoxFuture<'static, Port>,
     stderr: LocalBoxStream<'static, String>,
     error: BoxFuture<'static, DevError>,
@@ -233,7 +233,7 @@ fn app(inputs: Inputs) -> Outputs {
 
     Outputs {
         kill_child,
-        start_builder,
+        run_builder: start_builder,
         launch_browser,
         stderr,
         error,
