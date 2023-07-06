@@ -4,7 +4,7 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::{self, BoxFuture},
+    future::{self, BoxFuture, LocalBoxFuture},
     select,
     stream::{self, BoxStream, LocalBoxStream},
     Future, FutureExt, StreamExt, TryStreamExt,
@@ -305,11 +305,17 @@ impl ChildKillerDriver {
     }
 }
 
-fn rc_try_unwrap_recursive<T>(result: Result<T, Rc<T>>) -> BoxFuture< T > {
-    match result {
-        Ok(inner) => inner,
-        err @ Err(_) => rc_try_unwrap_recursive(err).await,
+fn rc_try_unwrap_recursive<T>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
+    async {
+        match result {
+            Ok(inner) => inner,
+            Err(rc) => match Rc::try_unwrap(rc) {
+                Ok(inner) => inner,
+                err @ Err(_) => rc_try_unwrap_recursive(err).await,
+            },
+        }
     }
+    .boxed_local()
 }
 
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
