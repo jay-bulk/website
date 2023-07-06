@@ -4,9 +4,9 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::{Utf8Path, Utf8PathBuf};
 use future_handles::sync::CompleteHandle;
 use futures::{
-    future::BoxFuture,
+    future::{self, BoxFuture},
     select,
-    stream::{BoxStream, LocalBoxStream},
+    stream::{self, BoxStream, LocalBoxStream},
     Future, FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
@@ -168,33 +168,41 @@ fn app(inputs: Inputs) -> Outputs {
         .map(StreamInput::BuilderStarted)
         .boxed_local();
 
-    let initial = futures::stream::once(futures::future::ready(StreamOutput::RunBuilder));
-    let reaction =
-        futures::stream::select_all([child_killed, builder_crate_fs_change, builder_started]).scan(
-            State::default(),
-            move |state, input| {
-                let emit = match input {
-                    StreamInput::ChildKilled(_) => {
-                        //
-                        todo!()
-                    }
-                    StreamInput::BuilderCrateFsChange(_) => {
-                        //
-                        todo!()
-                    }
-                    StreamInput::BuilderStarted(_) => {
-                        //
-                        todo!()
-                    }
-                };
+    let initial = stream::once(future::ready(StreamOutput::RunBuilder));
+    let reaction = stream::select_all([child_killed, builder_crate_fs_change, builder_started])
+        .scan(State::default(), move |state, input| {
+            let emit = match input {
+                StreamInput::ChildKilled(_) => {
+                    //
+                    todo!()
+                }
+                StreamInput::BuilderCrateFsChange(_) => {
+                    //
+                    todo!()
+                }
+                StreamInput::BuilderStarted(_) => {
+                    //
+                    todo!()
+                }
+            };
 
-                futures::future::ready(Some(emit))
-            },
-        );
+            future::ready(Some(emit))
+        });
 
     let output = initial.chain(reaction).shared();
 
-    let kill_child = output.clone().filter_map(f);
+    let kill_child = output
+        .clone()
+        .filter_map(|output| {
+            let child = if let StreamOutput::KillChild(child) = output {
+                Some(child)
+            } else {
+                None
+            };
+
+            future::ready(child)
+        })
+        .boxed_local();
 
     Outputs {
         kill_child,
