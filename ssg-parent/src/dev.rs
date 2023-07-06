@@ -297,13 +297,18 @@ impl ChildKillerDriver {
         loop {
             let child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
             let child = loop {
-                if let Ok(child) = Rc::try_unwrap(child) {
-                    break child
-                }
+                let result = Rc::try_unwrap(child);
             };
             let result = child.kill().await;
             self.0.send(result).await.unwrap();
         }
+    }
+}
+
+async fn rc_try_unwrap_recursive<T>(result: Result<T, Rc<T>>) -> T {
+    match result {
+        Ok(inner) => inner,
+        err @ Err(_) => rc_try_unwrap_recursive(err).await,
     }
 }
 
