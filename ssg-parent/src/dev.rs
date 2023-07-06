@@ -120,6 +120,7 @@ enum StreamInput {
 enum StreamOutput {
     RunBuilder,
     KillChild(Child),
+    Stderr(String),
 }
 
 struct Inputs {
@@ -199,16 +200,36 @@ fn app(inputs: Inputs) -> Outputs {
             } else {
                 None
             };
-        
+
             future::ready(child)
         })
         .boxed_local();
 
     let start_builder = output
         .clone()
-        .filter_map(|output|{
-            let 
-        }
+        .filter_map(|output| {
+            let output = if let StreamOutput::RunBuilder = output {
+                Some(())
+            } else {
+                None
+            };
+
+            future::ready(output)
+        })
+        .boxed_Local();
+
+    let stderr = output
+        .clone()
+        .filter_map(|output| {
+            let output = if let StreamOutput::Stderr(message) = output {
+                Some(message)
+            } else {
+                None
+            };
+
+            future::ready(output)
+        })
+        .boxed_local();
 
     Outputs {
         kill_child,
