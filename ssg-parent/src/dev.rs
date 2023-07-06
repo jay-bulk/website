@@ -126,8 +126,8 @@ enum StreamOutput {
 struct Inputs {
     server_task: BoxFuture<'static, std::io::Error>,
     port: Port,
-    child_killed: BoxStream<'static, Result<(), std::io::Error>>,
-    builder_crate_fs_change: BoxStream<'static, Result<(), notify::Error>>,
+    child_killed: LocalBoxStream<'static, Result<(), std::io::Error>>,
+    builder_crate_fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     browser_launch: BoxFuture<'static, Result<(), std::io::Error>>,
@@ -236,7 +236,7 @@ fn app(inputs: Inputs) -> Outputs {
         run_builder: start_builder,
         stderr,
         error,
-        launch_browser: todo!(),
+        launch_browser,
     }
 }
 
