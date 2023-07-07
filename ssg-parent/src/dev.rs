@@ -242,7 +242,8 @@ fn app(inputs: Inputs) -> Outputs {
 
             future::ready(output)
         })
-        .select_next_some()
+        .into_future()
+        .map(|(error, _tail_of_stream)| error.unwrap())
         .boxed_local();
 
     let launch_browser = if launch_browser {
