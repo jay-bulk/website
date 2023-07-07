@@ -151,6 +151,7 @@ struct State {
 #[derive(Debug, Default)]
 enum BuilderState {
     None,
+    Obsolete,
     #[default]
     Starting,
     Started(Child),
@@ -194,8 +195,13 @@ fn app(inputs: Inputs) -> Outputs {
                     match result {
                         Ok(_) => match state.builder {
                             BuilderState::None => None,
-                            BuilderState::Starting => None,
-                            BuilderState::Started(_) => todo!(),
+                            BuilderState::Starting => {
+                                state.builder = BuilderState::Obsolete;
+                                None 
+                            },
+                            BuilderState::Started(child) => {
+                                if sta
+                            },
                             BuilderState::Killing => todo!(),
                         }, // refresh
                         Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
