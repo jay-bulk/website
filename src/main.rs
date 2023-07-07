@@ -3,7 +3,7 @@
 use anyhow::bail;
 use builder::OUTPUT_DIR;
 use clap::{Parser, Subcommand};
-use ssg_parent::dev;
+use ssg_parent::{dev, DevError};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -31,14 +31,14 @@ impl Default for Mode {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> anyhow::Result<DevError> {
     #[cfg(feature = "tokio_console")]
     console_subscriber::init();
 
     let cli = Cli::parse();
 
     match cli.mode.unwrap_or_default() {
-        Mode::Dev { open } => bail!(dev(open, OUTPUT_DIR.as_path()).await),
+        Mode::Dev { open } => return Err(dev(open, OUTPUT_DIR.as_path()).await),
         Mode::PrintOutputDir => print!("{}", OUTPUT_DIR.as_os_str().to_str().unwrap()),
     }
 
