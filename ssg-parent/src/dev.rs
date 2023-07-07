@@ -27,7 +27,7 @@ pub enum DevError {
     #[error(transparent)]
     Watch(Rc<notify::Error>),
     #[error(transparent)]
-    Io(Rc<std::io::Error>),
+    Io(#[from] Rc<std::io::Error>),
     #[error("no free port")]
     NoFreePort,
 }
@@ -145,11 +145,13 @@ struct Outputs {
 
 #[derive(Debug, Default)]
 struct State {
-    builder: Child,
+    builder: BuilderState,
 }
 
+#[derive(Debug, Default)]
 enum BuilderState {
     None,
+    #[default]
     Starting,
     Started(Child),
 }
@@ -184,8 +186,8 @@ fn app(inputs: Inputs) -> Outputs {
                     Ok(_) => {
                         state.builder = BuilderState::None;
                         Some(StreamOutput::RunBuilder)
-                    },
-                    Err(_) => todo!()
+                    }
+                    Err(error) => Some(error.into()),
                 },
                 StreamInput::BuilderCrateFsChange(_) => {
                     //
