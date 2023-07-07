@@ -1,6 +1,5 @@
 #![warn(clippy::all, clippy::pedantic)]
 
-use anyhow::bail;
 use builder::OUTPUT_DIR;
 use clap::{Parser, Subcommand};
 use ssg_parent::{dev, DevError};

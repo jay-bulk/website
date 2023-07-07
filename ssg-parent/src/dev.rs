@@ -159,17 +159,11 @@ enum BuilderState {
 }
 impl BuilderState {
     fn killing(&mut self) -> Option<Child> {
-        let mut out = Self::Killing;
-        std::mem::swap(self, &mut out);
-        if let Self::Started(child) = out {
+        if let Self::Started(child) = std::mem::replace(self, Self::Killing) {
             Some(child)
         } else {
             None
         }
-    }
-
-    fn killing2(&mut self) -> Option<Child> {
-        std::mem::replace(self, out);
     }
 }
 
@@ -208,19 +202,17 @@ fn app(inputs: Inputs) -> Outputs {
                 },
                 StreamInput::BuilderCrateFsChange(result) => {
                     match result {
-                        Ok(_) => {
-                            match &mut state.builder {
-                                                    BuilderState::None => None,
-                                                    BuilderState::Starting => {
-                                                        state.builder = BuilderState::Obsolete;
-                                                        None
-                                                    }
-                                                    BuilderState::Started(_) => Some(StreamOutput::KillChild(Rc::new(
-                                                        state.builder.killing().unwrap(),
-                                                    ))),
-                                                    BuilderState::Killing => None,
-                                                    BuilderState::Obsolete => None,
-                                                }
+                        Ok(_) => match &mut state.builder {
+                            BuilderState::Starting => {
+                                state.builder = BuilderState::Obsolete;
+                                None
+                            }
+                            BuilderState::Started(_) => Some(StreamOutput::KillChild(Rc::new(
+                                state.builder.killing().unwrap(),
+                            ))),
+                            BuilderState::Killing | BuilderState::None | BuilderState::Obsolete => {
+                                None
+                            }
                         }, // refresh
                         Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
                     }
@@ -233,7 +225,7 @@ fn app(inputs: Inputs) -> Outputs {
 
             future::ready(Some(emit))
         })
-        .filter_map(|emit| future::ready(emit));
+        .filter_map(future::ready);
 
     let output = initial.chain(reaction).shared();
 
