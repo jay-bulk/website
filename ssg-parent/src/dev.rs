@@ -145,7 +145,13 @@ struct Outputs {
 
 #[derive(Debug, Default)]
 struct State {
-    builder_child: Option<Child>,
+    builder: Child,
+}
+
+enum BuilderState {
+    None,
+    Starting,
+    Started(Child),
 }
 
 fn app(inputs: Inputs) -> Outputs {
@@ -173,12 +179,14 @@ fn app(inputs: Inputs) -> Outputs {
     let initial = stream::once(future::ready(StreamOutput::RunBuilder));
     let reaction = stream::select_all([child_killed, builder_crate_fs_change, builder_started])
         .scan(State::default(), move |state, input| {
-            let emit : Option<_> = match input {
-                StreamInput::BuilderKilled(result) => {
-                    match result {
-                        Ok(_) => state.
-                    }
-                }
+            let emit: Option<_> = match input {
+                StreamInput::BuilderKilled(result) => match result {
+                    Ok(_) => {
+                        state.builder = BuilderState::None;
+                        Some(StreamOutput::RunBuilder)
+                    },
+                    Err(_) => todo!()
+                },
                 StreamInput::BuilderCrateFsChange(_) => {
                     //
                     todo!()
