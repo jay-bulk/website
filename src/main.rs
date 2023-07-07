@@ -31,7 +31,7 @@ impl Default for Mode {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<DevError> {
+async fn main() -> Result<(), DevError> {
     #[cfg(feature = "tokio_console")]
     console_subscriber::init();
 

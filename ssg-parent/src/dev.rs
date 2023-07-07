@@ -111,7 +111,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 }
 
 enum StreamInput {
-    ChildKilled(Result<(), std::io::Error>),
+    BuilderKilled(Result<(), std::io::Error>),
     BuilderCrateFsChange(Result<(), notify::Error>),
     BuilderStarted(Result<Child, std::io::Error>),
 }
@@ -160,7 +160,7 @@ fn app(inputs: Inputs) -> Outputs {
         output_dir,
     } = inputs;
 
-    let child_killed = child_killed.map(StreamInput::ChildKilled).boxed_local();
+    let child_killed = child_killed.map(StreamInput::BuilderKilled).boxed_local();
 
     let builder_crate_fs_change = builder_crate_fs_change
         .map(StreamInput::BuilderCrateFsChange)
@@ -174,7 +174,7 @@ fn app(inputs: Inputs) -> Outputs {
     let reaction = stream::select_all([child_killed, builder_crate_fs_change, builder_started])
         .scan(State::default(), move |state, input| {
             let emit = match input {
-                StreamInput::ChildKilled(_) => {
+                StreamInput::BuilderKilled(result) => {
                     //
                     todo!()
                 }
@@ -189,7 +189,8 @@ fn app(inputs: Inputs) -> Outputs {
             };
 
             future::ready(Some(emit))
-        });
+        })
+        .filter_map(|emit| emit);
 
     let output = initial.chain(reaction).shared();
 
@@ -325,7 +326,7 @@ impl ChildKillerDriver {
 }
 
 // TODO trait method
-fn rc_try_unwrap_recursive<T : 'static>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
+fn rc_try_unwrap_recursive<T: 'static>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
     async {
         match result {
             Ok(inner) => inner,
