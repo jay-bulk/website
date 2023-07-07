@@ -157,6 +157,11 @@ enum BuilderState {
     Started(Child),
     Killing,
 }
+impl BuilderState {
+    fn killing(&self) -> _ {
+        todo!()
+    }
+}
 
 fn app(inputs: Inputs) -> Outputs {
     let Inputs {
@@ -193,18 +198,20 @@ fn app(inputs: Inputs) -> Outputs {
                 },
                 StreamInput::BuilderCrateFsChange(result) => {
                     match result {
-                        Ok(_) => match &mut state.builder {
-                            BuilderState::None => None,
-                            BuilderState::Starting => {
-                                state.builder = BuilderState::Obsolete;
-                                None
-                            }
-                            BuilderState::Started(child) => {
-                                state.builder = BuilderState::Killing;
-                                Some(StreamOutput::KillChild(Rc::new(child)))
-                            }
-                            BuilderState::Killing => None,
-                            BuilderState::Obsolete => None,
+                        Ok(_) => {
+                            let builder_state = std::mem::replace(state.builder, StateBuilder::);
+                            match &mut state.builder {
+                                                    BuilderState::None => None,
+                                                    BuilderState::Starting => {
+                                                        state.builder = BuilderState::Obsolete;
+                                                        None
+                                                    }
+                                                    BuilderState::Started(_) => Some(StreamOutput::KillChild(Rc::new(
+                                                        state.builder.killing().unwrap(),
+                                                    ))),
+                                                    BuilderState::Killing => None,
+                                                    BuilderState::Obsolete => None,
+                                                }
                         }, // refresh
                         Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
                     }
