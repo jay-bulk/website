@@ -158,8 +158,10 @@ enum BuilderState {
     Killing,
 }
 impl BuilderState {
-    fn killing(&self) -> _ {
-        todo!()
+    fn killing(&mut self) -> Option<Child> {
+        let mut out = Self::None;
+        if let BuilderState::Started(child) = self {
+        } else 
     }
 }
 
@@ -199,7 +201,6 @@ fn app(inputs: Inputs) -> Outputs {
                 StreamInput::BuilderCrateFsChange(result) => {
                     match result {
                         Ok(_) => {
-                            let builder_state = std::mem::replace(state.builder, StateBuilder::);
                             match &mut state.builder {
                                                     BuilderState::None => None,
                                                     BuilderState::Starting => {
