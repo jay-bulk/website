@@ -25,7 +25,7 @@ const NEVER_ENDING_STREAM: &str = "never ending stream";
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    Watch(Rc<notify::Error>),
+    FsWatch(Rc<notify::Error>),
     #[error(transparent)]
     Io(Rc<std::io::Error>),
     #[error("no free port")]
@@ -154,6 +154,7 @@ enum BuilderState {
     #[default]
     Starting,
     Started(Child),
+    Killing,
 }
 
 fn app(inputs: Inputs) -> Outputs {
@@ -191,8 +192,10 @@ fn app(inputs: Inputs) -> Outputs {
                 },
                 StreamInput::BuilderCrateFsChange(result) => {
                     match result {
-                        Ok(_) => // refresh
-                        Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+                        Ok(_) => {
+                            Some(StreamOutput::KillChild(state.builder.child()))
+                        },// refresh
+                        Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
                         
                     }
                 }
