@@ -243,7 +243,7 @@ fn app(inputs: Inputs) -> Outputs {
             future::ready(output)
         })
         .into_future()
-        .map(|(error, _tail_of_stream)| error.unwrap())
+        .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
         .boxed_local();
 
     let launch_browser = if launch_browser {
@@ -325,7 +325,7 @@ impl ChildKillerDriver {
 }
 
 // TODO trait method
-fn rc_try_unwrap_recursive<T>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
+fn rc_try_unwrap_recursive<T : 'static>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
     async {
         match result {
             Ok(inner) => inner,
