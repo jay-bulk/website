@@ -192,11 +192,13 @@ fn app(inputs: Inputs) -> Outputs {
                 },
                 StreamInput::BuilderCrateFsChange(result) => {
                     match result {
-                        Ok(_) => {
-                            Some(StreamOutput::KillChild(state.builder.child()))
-                        },// refresh
+                        Ok(_) => match state.builder {
+                            BuilderState::None => None,
+                            BuilderState::Starting => None,
+                            BuilderState::Started(_) => todo!(),
+                            BuilderState::Killing => todo!(),
+                        }, // refresh
                         Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
-                        
                     }
                 }
                 StreamInput::BuilderStarted(_) => {
