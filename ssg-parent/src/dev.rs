@@ -159,9 +159,17 @@ enum BuilderState {
 }
 impl BuilderState {
     fn killing(&mut self) -> Option<Child> {
-        let mut out = Self::None;
-        if let BuilderState::Started(child) = self {
-        } else 
+        let mut out = Self::Killing;
+        std::mem::swap(self, &mut out);
+        if let Self::Started(child) = out {
+            Some(child)
+        } else {
+            None
+        }
+    }
+
+    fn killing2(&mut self) -> Option<Child> {
+        std::mem::replace(self, out);
     }
 }
 
