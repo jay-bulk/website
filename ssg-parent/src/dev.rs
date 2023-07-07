@@ -173,10 +173,11 @@ fn app(inputs: Inputs) -> Outputs {
     let initial = stream::once(future::ready(StreamOutput::RunBuilder));
     let reaction = stream::select_all([child_killed, builder_crate_fs_change, builder_started])
         .scan(State::default(), move |state, input| {
-            let emit = match input {
+            let emit : Option<_> = match input {
                 StreamInput::BuilderKilled(result) => {
-                    //
-                    todo!()
+                    match result {
+                        Ok(_) => state.
+                    }
                 }
                 StreamInput::BuilderCrateFsChange(_) => {
                     //
