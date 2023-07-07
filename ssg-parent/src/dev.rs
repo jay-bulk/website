@@ -193,16 +193,18 @@ fn app(inputs: Inputs) -> Outputs {
                 },
                 StreamInput::BuilderCrateFsChange(result) => {
                     match result {
-                        Ok(_) => match state.builder {
+                        Ok(_) => match &mut state.builder {
                             BuilderState::None => None,
                             BuilderState::Starting => {
                                 state.builder = BuilderState::Obsolete;
-                                None 
-                            },
+                                None
+                            }
                             BuilderState::Started(child) => {
-                                if sta
-                            },
-                            BuilderState::Killing => todo!(),
+                                state.builder = BuilderState::Killing;
+                                Some(StreamOutput::KillChild(Rc::new(child)))
+                            }
+                            BuilderState::Killing => None,
+                            BuilderState::Obsolete => None,
                         }, // refresh
                         Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
                     }
@@ -215,7 +217,7 @@ fn app(inputs: Inputs) -> Outputs {
 
             future::ready(Some(emit))
         })
-        .filter_map(|emit| emit);
+        .filter_map(|emit| future::ready(emit));
 
     let output = initial.chain(reaction).shared();
 
