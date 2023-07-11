@@ -225,7 +225,7 @@ fn app(inputs: Inputs) -> Outputs {
                             state.builder = BuilderState::Killing;
                             Some(StreamOutput::KillChild(Rc::new(child)))
                         }
-                        BuilderState::Started(_) => todo!(),
+                        BuilderState::Started(_) => unreachable!(),
                         BuilderState::Killing => todo!(),
                     },
                     Err(_) => todo!(),
