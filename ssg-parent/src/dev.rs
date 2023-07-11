@@ -183,7 +183,7 @@ fn app(inputs: Inputs) -> Outputs {
     let initial = stream::once(future::ready(OutputEvent::RunBuilder));
 
     let reaction = stream::select_all([
-        stream::once(server_task).boxed_local(),
+        stream::once(server_task).map(InputEvent::ServerError).boxed_local(),
         child_killed.map(InputEvent::BuilderKilled).boxed_local(),
         builder_crate_fs_change
             .map(InputEvent::BuilderCrateFsChange)
@@ -241,6 +241,7 @@ fn app(inputs: Inputs) -> Outputs {
                 Ok(_) => None,
                 Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
             },
+            InputEvent::ServerError(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))) 
         };
 
         future::ready(Some(emit))
