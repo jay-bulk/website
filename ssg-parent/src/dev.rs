@@ -365,6 +365,7 @@ impl ChildKillerDriver {
 // TODO trait method
 fn rc_try_unwrap_recursive<T: 'static>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
     async {
+        println!("RC TRY UNWRAP RECURSIVE");
         match result {
             Ok(inner) => inner,
             Err(rc) => rc_try_unwrap_recursive(Rc::try_unwrap(rc)).await,
