@@ -363,14 +363,18 @@ impl ChildKillerDriver {
 }
 
 // TODO trait method
-// FIX RECURSION
 fn rc_try_unwrap_recursive<T: 'static>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
     async {
- 
-        println!("RC TRY UNWRAP RECURSIVE");
-        match result {
-            Ok(inner) => inner,
-            Err(rc) => rc_try_unwrap_recursive(Rc::try_unwrap(rc)).await,
+        let mut state = result;
+        loop {
+            async{}.await;
+            match state {
+                Ok(inner) => break inner,
+                Err(rc) => {
+                    println!("RC TRY UNWRAP RECURSIVE :: count = {}", Rc::strong_count(&rc)); // recursion is fixed, but the strong count stays at 2
+                    state = Rc::try_unwrap(rc)
+                },
+            }
         }
     }
     .boxed_local()
