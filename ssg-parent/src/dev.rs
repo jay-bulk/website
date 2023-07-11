@@ -182,23 +182,19 @@ fn app(inputs: Inputs) -> Outputs {
         output_dir,
     } = inputs;
 
-    let child_killed = child_killed.map(StreamInput::BuilderKilled).boxed_local();
-
-    let builder_crate_fs_change = builder_crate_fs_change
-        .map(StreamInput::BuilderCrateFsChange)
-        .boxed_local();
-
-    let builder_started = builder_started
-        .map(StreamInput::BuilderStarted)
-        .boxed_local();
-
     let initial = stream::once(future::ready(StreamOutput::RunBuilder));
-    let browser_launched = stream::once(browser_launch).map(||).boxed_local();
+
     let reaction = stream::select_all([
-        child_killed,
-        builder_crate_fs_change,
-        builder_started,
-        browser_launched,
+        child_killed.map(StreamInput::BuilderKilled).boxed_local(),
+        builder_crate_fs_change
+            .map(StreamInput::BuilderCrateFsChange)
+            .boxed_local(),
+        builder_started
+            .map(StreamInput::BuilderStarted)
+            .boxed_local(),
+        stream::once(browser_launch)
+            .map(StreamInput::BrowserLaunched)
+            .boxed_local(),
     ])
     .scan(State::default(), move |state, input| {
         let emit = match input {
@@ -240,6 +236,10 @@ fn app(inputs: Inputs) -> Outputs {
                         Some(StreamOutput::KillChild(Rc::new(current_child)))
                     }
                 },
+                Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+            },
+            StreamInput::BrowserLaunched(result) => match result {
+                Ok(_) => None,
                 Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
             },
         };
