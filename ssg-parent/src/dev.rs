@@ -208,9 +208,10 @@ fn app(inputs: Inputs) -> Outputs {
                             state.builder = BuilderState::Obsolete;
                             None
                         }
-                        BuilderState::Started(_) => Some(StreamOutput::KillChild(Rc::new(
-                            state.builder.killing().unwrap(),
-                        ))),
+                        BuilderState::Started(_) => {
+                            let child = state.builder.killing().unwrap();
+                            Some(StreamOutput::KillChild(Rc::new(child)))
+                        }
                         BuilderState::Killing | BuilderState::None | BuilderState::Obsolete => None,
                     },
                     Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
