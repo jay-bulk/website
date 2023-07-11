@@ -167,6 +167,8 @@ impl BuilderState {
     }
 }
 
+// TODO too many lines
+#[allow(clippy::too_many_lines)]
 fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
@@ -192,7 +194,7 @@ fn app(inputs: Inputs) -> Outputs {
     let initial = stream::once(future::ready(StreamOutput::RunBuilder));
     let reaction = stream::select_all([child_killed, builder_crate_fs_change, builder_started])
         .scan(State::default(), move |state, input| {
-            let emit: Option<_> = match input {
+            let emit = match input {
                 StreamInput::BuilderKilled(result) => match result {
                     Ok(_) => {
                         state.builder = BuilderState::None;
@@ -200,27 +202,34 @@ fn app(inputs: Inputs) -> Outputs {
                     }
                     Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
                 },
-                StreamInput::BuilderCrateFsChange(result) => {
-                    match result {
-                        Ok(_) => match &mut state.builder {
-                            BuilderState::Starting => {
-                                state.builder = BuilderState::Obsolete;
-                                None
-                            }
-                            BuilderState::Started(_) => Some(StreamOutput::KillChild(Rc::new(
-                                state.builder.killing().unwrap(),
-                            ))),
-                            BuilderState::Killing | BuilderState::None | BuilderState::Obsolete => {
-                                None
-                            }
-                        }, // refresh
-                        Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
-                    }
-                }
-                StreamInput::BuilderStarted(_) => {
-                    //
-                    todo!()
-                }
+                StreamInput::BuilderCrateFsChange(result) => match result {
+                    Ok(_) => match &mut state.builder {
+                        BuilderState::Starting => {
+                            state.builder = BuilderState::Obsolete;
+                            None
+                        }
+                        BuilderState::Started(_) => Some(StreamOutput::KillChild(Rc::new(
+                            state.builder.killing().unwrap(),
+                        ))),
+                        BuilderState::Killing | BuilderState::None | BuilderState::Obsolete => None,
+                    },
+                    Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
+                },
+                StreamInput::BuilderStarted(child) => match child {
+                    Ok(child) => match state.builder {
+                        BuilderState::None | BuilderState::Starting => {
+                            state.builder = BuilderState::Started(child);
+                            None
+                        }
+                        BuilderState::Obsolete => {
+                            state.builder = BuilderState::Killing;
+                            Some(StreamOutput::KillChild(Rc::new(child)))
+                        }
+                        BuilderState::Started(_) => todo!(),
+                        BuilderState::Killing => todo!(),
+                    },
+                    Err(_) => todo!(),
+                },
             };
 
             future::ready(Some(emit))
