@@ -1,7 +1,7 @@
 use std::{path::PathBuf, rc::Rc};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use future_handles::sync::CompleteHandle;
 use futures::{
     future::{self, LocalBoxFuture},
@@ -69,19 +69,18 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_child) = BuilderDriver::new();
+    let (builder_driver, builder_started) = BuilderDriver::new();
     let (child_killer_driver, child_killed) = ChildKillerDriver::new();
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
 
     let inputs = Inputs {
         server_task,
         port,
+        child_killed,
         builder_crate_fs_change,
+        builder_started,
         launch_browser,
         browser_launch,
-        output_dir,
-        builder_started: builder_child,
-        child_killed,
     };
 
     let outputs = app(inputs);
@@ -110,15 +109,16 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     app_error
 }
 
-enum StreamInput {
+enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
     BuilderCrateFsChange(Result<(), notify::Error>),
     BuilderStarted(Result<Child, std::io::Error>),
     BrowserLaunched(Result<(), std::io::Error>),
+    ServerError(std::io::Error),
 }
 
 #[derive(Clone)]
-enum StreamOutput {
+enum OutputEvent {
     RunBuilder,
     KillChild(Rc<Child>),
     Stderr(String),
@@ -133,7 +133,6 @@ struct Inputs {
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     browser_launch: LocalBoxFuture<'static, Result<(), std::io::Error>>,
-    output_dir: Utf8PathBuf,
 }
 
 struct Outputs {
@@ -179,33 +178,33 @@ fn app(inputs: Inputs) -> Outputs {
         builder_started,
         launch_browser,
         browser_launch,
-        output_dir,
     } = inputs;
 
-    let initial = stream::once(future::ready(StreamOutput::RunBuilder));
+    let initial = stream::once(future::ready(OutputEvent::RunBuilder));
 
     let reaction = stream::select_all([
-        child_killed.map(StreamInput::BuilderKilled).boxed_local(),
+        stream::once(server_task).boxed_local(),
+        child_killed.map(InputEvent::BuilderKilled).boxed_local(),
         builder_crate_fs_change
-            .map(StreamInput::BuilderCrateFsChange)
+            .map(InputEvent::BuilderCrateFsChange)
             .boxed_local(),
         builder_started
-            .map(StreamInput::BuilderStarted)
+            .map(InputEvent::BuilderStarted)
             .boxed_local(),
         stream::once(browser_launch)
-            .map(StreamInput::BrowserLaunched)
+            .map(InputEvent::BrowserLaunched)
             .boxed_local(),
     ])
     .scan(State::default(), move |state, input| {
         let emit = match input {
-            StreamInput::BuilderKilled(result) => match result {
+            InputEvent::BuilderKilled(result) => match result {
                 Ok(_) => {
                     state.builder = BuilderState::None;
-                    Some(StreamOutput::RunBuilder)
+                    Some(OutputEvent::RunBuilder)
                 }
-                Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
             },
-            StreamInput::BuilderCrateFsChange(result) => match result {
+            InputEvent::BuilderCrateFsChange(result) => match result {
                 Ok(_) => match &mut state.builder {
                     BuilderState::Starting => {
                         state.builder = BuilderState::Obsolete;
@@ -213,13 +212,13 @@ fn app(inputs: Inputs) -> Outputs {
                     }
                     BuilderState::Started(_) => {
                         let child = state.builder.killing().unwrap();
-                        Some(StreamOutput::KillChild(Rc::new(child)))
+                        Some(OutputEvent::KillChild(Rc::new(child)))
                     }
                     BuilderState::None | BuilderState::Obsolete => None,
                 },
-                Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::FsWatch(Rc::new(error)))),
             },
-            StreamInput::BuilderStarted(child) => match child {
+            InputEvent::BuilderStarted(child) => match child {
                 Ok(child) => match state.builder {
                     BuilderState::None | BuilderState::Starting => {
                         state.builder = BuilderState::Started(child);
@@ -227,20 +226,20 @@ fn app(inputs: Inputs) -> Outputs {
                     }
                     BuilderState::Obsolete => {
                         state.builder = BuilderState::None;
-                        Some(StreamOutput::KillChild(Rc::new(child)))
+                        Some(OutputEvent::KillChild(Rc::new(child)))
                     }
                     BuilderState::Started(_) => {
                         // TODO is this reachable?
                         let current_child = state.builder.killing().unwrap();
                         state.builder = BuilderState::Started(child);
-                        Some(StreamOutput::KillChild(Rc::new(current_child)))
+                        Some(OutputEvent::KillChild(Rc::new(current_child)))
                     }
                 },
-                Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
             },
-            StreamInput::BrowserLaunched(result) => match result {
+            InputEvent::BrowserLaunched(result) => match result {
                 Ok(_) => None,
-                Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
             },
         };
 
@@ -253,7 +252,7 @@ fn app(inputs: Inputs) -> Outputs {
     let kill_child = output
         .clone()
         .filter_map(|output| {
-            let child = if let StreamOutput::KillChild(child) = output {
+            let child = if let OutputEvent::KillChild(child) = output {
                 Some(child)
             } else {
                 None
@@ -266,7 +265,7 @@ fn app(inputs: Inputs) -> Outputs {
     let start_builder = output
         .clone()
         .filter_map(|output| {
-            let output = if let StreamOutput::RunBuilder = output {
+            let output = if let OutputEvent::RunBuilder = output {
                 Some(())
             } else {
                 None
@@ -279,7 +278,7 @@ fn app(inputs: Inputs) -> Outputs {
     let stderr = output
         .clone()
         .filter_map(|output| {
-            let output = if let StreamOutput::Stderr(message) = output {
+            let output = if let OutputEvent::Stderr(message) = output {
                 Some(message)
             } else {
                 None
@@ -291,7 +290,7 @@ fn app(inputs: Inputs) -> Outputs {
 
     let error = output
         .filter_map(|output| {
-            let output = if let StreamOutput::Error(error) = output {
+            let output = if let OutputEvent::Error(error) = output {
                 Some(error)
             } else {
                 None
