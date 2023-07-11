@@ -114,6 +114,7 @@ enum StreamInput {
     BuilderKilled(Result<(), std::io::Error>),
     BuilderCrateFsChange(Result<(), notify::Error>),
     BuilderStarted(Result<Child, std::io::Error>),
+    BrowserLaunched(Result<(), std::io::Error>),
 }
 
 #[derive(Clone)]
@@ -192,54 +193,59 @@ fn app(inputs: Inputs) -> Outputs {
         .boxed_local();
 
     let initial = stream::once(future::ready(StreamOutput::RunBuilder));
-    let reaction = stream::select_all([child_killed, builder_crate_fs_change, builder_started])
-        .scan(State::default(), move |state, input| {
-            let emit = match input {
-                StreamInput::BuilderKilled(result) => match result {
-                    Ok(_) => {
-                        state.builder = BuilderState::None;
-                        Some(StreamOutput::RunBuilder)
+    let reaction = stream::select_all([
+        child_killed,
+        builder_crate_fs_change,
+        builder_started,
+        browser_launched,
+    ])
+    .scan(State::default(), move |state, input| {
+        let emit = match input {
+            StreamInput::BuilderKilled(result) => match result {
+                Ok(_) => {
+                    state.builder = BuilderState::None;
+                    Some(StreamOutput::RunBuilder)
+                }
+                Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+            },
+            StreamInput::BuilderCrateFsChange(result) => match result {
+                Ok(_) => match &mut state.builder {
+                    BuilderState::Starting => {
+                        state.builder = BuilderState::Obsolete;
+                        None
                     }
-                    Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+                    BuilderState::Started(_) => {
+                        let child = state.builder.killing().unwrap();
+                        Some(StreamOutput::KillChild(Rc::new(child)))
+                    }
+                    BuilderState::None | BuilderState::Obsolete => None,
                 },
-                StreamInput::BuilderCrateFsChange(result) => match result {
-                    Ok(_) => match &mut state.builder {
-                        BuilderState::Starting => {
-                            state.builder = BuilderState::Obsolete;
-                            None
-                        }
-                        BuilderState::Started(_) => {
-                            let child = state.builder.killing().unwrap();
-                            Some(StreamOutput::KillChild(Rc::new(child)))
-                        }
-                        BuilderState::None | BuilderState::Obsolete => None,
-                    },
-                    Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
+                Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
+            },
+            StreamInput::BuilderStarted(child) => match child {
+                Ok(child) => match state.builder {
+                    BuilderState::None | BuilderState::Starting => {
+                        state.builder = BuilderState::Started(child);
+                        None
+                    }
+                    BuilderState::Obsolete => {
+                        state.builder = BuilderState::None;
+                        Some(StreamOutput::KillChild(Rc::new(child)))
+                    }
+                    BuilderState::Started(_) => {
+                        // TODO is this reachable?
+                        let current_child = state.builder.killing().unwrap();
+                        state.builder = BuilderState::Started(child);
+                        Some(StreamOutput::KillChild(Rc::new(current_child)))
+                    }
                 },
-                StreamInput::BuilderStarted(child) => match child {
-                    Ok(child) => match state.builder {
-                        BuilderState::None | BuilderState::Starting => {
-                            state.builder = BuilderState::Started(child);
-                            None
-                        }
-                        BuilderState::Obsolete => {
-                            state.builder = BuilderState::None;
-                            Some(StreamOutput::KillChild(Rc::new(child)))
-                        }
-                        BuilderState::Started(_) => {
-                            // TODO is this reachable?
-                            let current_child = state.builder.killing().unwrap();
-                            state.builder = BuilderState::Started(child);
-                            Some(StreamOutput::KillChild(Rc::new(current_child)))
-                        }
-                    },
-                    Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
-                },
-            };
+                Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
+            },
+        };
 
-            future::ready(Some(emit))
-        })
-        .filter_map(future::ready);
+        future::ready(Some(emit))
+    })
+    .filter_map(future::ready);
 
     let output = initial.chain(reaction).shared();
 
