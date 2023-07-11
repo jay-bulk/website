@@ -88,7 +88,6 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let Outputs {
         launch_browser,
         error: app_error,
-        stderr,
         kill_child,
         run_builder,
     } = outputs;
@@ -96,14 +95,12 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_killer_driver.init(kill_child);
     let browser_launcher_task = browser_launch_driver.init(launch_browser);
-    let eprintln_task = stderr.for_each(|message| async move { eprintln!("{message}") });
 
     let app_error = select! {
         error = app_error.fuse() => error,
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
         _ = browser_launcher_task.fuse() => unreachable!(),
-        _ = eprintln_task.fuse() => unreachable!(),
     };
 
     app_error
@@ -121,7 +118,6 @@ enum InputEvent {
 enum OutputEvent {
     RunBuilder,
     KillChild(Rc<Child>),
-    Stderr(String),
     Error(DevError),
 }
 
@@ -139,7 +135,6 @@ struct Outputs {
     kill_child: LocalBoxStream<'static, Rc<Child>>,
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: LocalBoxFuture<'static, Port>,
-    stderr: LocalBoxStream<'static, String>,
     error: LocalBoxFuture<'static, DevError>,
 }
 
@@ -276,19 +271,6 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let stderr = output
-        .clone()
-        .filter_map(|output| {
-            let output = if let OutputEvent::Stderr(message) = output {
-                Some(message)
-            } else {
-                None
-            };
-
-            future::ready(output)
-        })
-        .boxed_local();
-
     let error = output
         .filter_map(|output| {
             let output = if let OutputEvent::Error(error) = output {
@@ -312,7 +294,6 @@ fn app(inputs: Inputs) -> Outputs {
     Outputs {
         kill_child,
         run_builder: start_builder,
-        stderr,
         error,
         launch_browser,
     }
@@ -404,5 +385,6 @@ impl BrowserLaunchDriver {
         let port = launch_browser.await;
         let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
         self.0.complete(open::that(url.as_str()));
+        future::pending().await
     }
 }
