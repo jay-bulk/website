@@ -226,9 +226,14 @@ fn app(inputs: Inputs) -> Outputs {
                             state.builder = BuilderState::None;
                             Some(StreamOutput::KillChild(Rc::new(child)))
                         }
-                        BuilderState::Started(_) => unreachable!(),
+                        BuilderState::Started(_) => {
+                            // TODO is this reachable?
+                            let current_child = state.builder.killing().unwrap();
+                            state.builder = BuilderState::Started(child);
+                            Some(StreamOutput::KillChild(Rc::new(current_child)))
+                        }
                     },
-                    Err(_) => todo!(),
+                    Err(error) => Some(StreamOutput::Error(DevError::Io(Rc::new(error)))),
                 },
             };
 
