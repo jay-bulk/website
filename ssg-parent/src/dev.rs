@@ -155,11 +155,11 @@ enum BuilderState {
     #[default]
     Starting,
     Started(Child),
-    Killing,
 }
+
 impl BuilderState {
     fn killing(&mut self) -> Option<Child> {
-        if let Self::Started(child) = std::mem::replace(self, Self::Killing) {
+        if let Self::Started(child) = std::mem::replace(self, Self::None) {
             Some(child)
         } else {
             None
@@ -212,7 +212,7 @@ fn app(inputs: Inputs) -> Outputs {
                             let child = state.builder.killing().unwrap();
                             Some(StreamOutput::KillChild(Rc::new(child)))
                         }
-                        BuilderState::Killing | BuilderState::None | BuilderState::Obsolete => None,
+                        BuilderState::None | BuilderState::Obsolete => None,
                     },
                     Err(error) => Some(StreamOutput::Error(DevError::FsWatch(Rc::new(error)))),
                 },
@@ -223,11 +223,10 @@ fn app(inputs: Inputs) -> Outputs {
                             None
                         }
                         BuilderState::Obsolete => {
-                            state.builder = BuilderState::Killing;
+                            state.builder = BuilderState::None;
                             Some(StreamOutput::KillChild(Rc::new(child)))
                         }
                         BuilderState::Started(_) => unreachable!(),
-                        BuilderState::Killing => todo!(),
                     },
                     Err(_) => todo!(),
                 },
