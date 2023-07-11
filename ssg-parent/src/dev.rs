@@ -193,6 +193,7 @@ fn app(inputs: Inputs) -> Outputs {
         .boxed_local();
 
     let initial = stream::once(future::ready(StreamOutput::RunBuilder));
+    let browser_launched = stream::once(browser_launch).map(||).boxed_local();
     let reaction = stream::select_all([
         child_killed,
         builder_crate_fs_change,
