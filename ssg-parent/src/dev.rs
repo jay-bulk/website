@@ -135,6 +135,7 @@ struct Outputs {
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: LocalBoxFuture<'static, Port>,
     error: LocalBoxFuture<'static, DevError>,
+    some_task: LocalBoxFuture<'static, ()>,
 }
 
 #[derive(Debug, Default)]
@@ -260,7 +261,7 @@ fn app(inputs: Inputs) -> Outputs {
     })
     .boxed_local();
 
-    let start_builder = fn_stream(|emitter| async move {
+    let run_builder = fn_stream(|emitter| async move {
         loop {
             let value = start_builder_receiver
                 .recv()
@@ -273,23 +274,16 @@ fn app(inputs: Inputs) -> Outputs {
 
     let error = fn_stream(|emitter| async move {
         loop {
-            let value = error_receiver
-                .recv()
-                .await
-                .expect(NEVER_ENDING_STREAM);
+            let value = error_receiver.recv().await.expect(NEVER_ENDING_STREAM);
             emitter.emit(value).await;
         }
-    }).boxed_local().into_future()
-        .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
-        .boxed_local();
+    })
+    .boxed_local()
+    .into_future()
+    .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
+    .boxed_local();
 
-    let launch_browser = if launch_browser {
-        future::ready(port).boxed_local()
-    } else {
-        future::pending().boxed_local()
-    };
-
-    output.for_each(|event| async {
+    let some_task = output.for_each(|event| async {
         match event {
             OutputEvent::RunBuilder => {
                 //
@@ -308,13 +302,18 @@ fn app(inputs: Inputs) -> Outputs {
         };
     });
 
-
+    let launch_browser = if launch_browser {
+        future::ready(port).boxed_local()
+    } else {
+        future::pending().boxed_local()
+    };
 
     Outputs {
         kill_child,
-        run_builder: start_builder,
+        run_builder,
         error,
         launch_browser,
+        some_task,
     }
 }
 
