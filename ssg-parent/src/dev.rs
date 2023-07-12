@@ -258,12 +258,12 @@ fn app(inputs: Inputs) -> Outputs {
     })
     .boxed_local();
 
-    output.for_each(f);
+    output.for_each(|event| async move);
 
 
     let start_builder = output
         .clone()
-        .filter_map(|output| {
+        .filter_map(|output| {er_map(|output| {
             let output = if let OutputEvent::RunBuilder = output {
                 Some(())
             } else {
