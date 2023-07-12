@@ -89,6 +89,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         error: app_error,
         kill_child,
         run_builder,
+        some_task,
     } = outputs;
 
     let builder_driver_task = builder_driver.init(run_builder);
@@ -100,6 +101,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
         _ = browser_launcher_task.fuse() => unreachable!(),
+        _ = some_task.fuse() => unreachable!(),
     };
 
     app_error
@@ -249,7 +251,7 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    let (kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
+    let (mut kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
     let (start_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
     let (error_sender, mut error_receiver) = mpsc::channel(1);
 
@@ -283,7 +285,9 @@ fn app(inputs: Inputs) -> Outputs {
     .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
     .boxed_local();
 
-    let some_task = output.for_each(|event| async {
+    let some_task = output.for_each(move |event| {
+        let kill_child_sender = &mut kill_child_sender;
+        async move {
         match event {
             OutputEvent::RunBuilder => {
                 //
@@ -300,7 +304,7 @@ fn app(inputs: Inputs) -> Outputs {
                 todo!()
             }
         };
-    });
+    }}).boxed_local();
 
     let launch_browser = if launch_browser {
         future::ready(port).boxed_local()
