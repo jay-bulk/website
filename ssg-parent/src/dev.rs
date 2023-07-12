@@ -285,26 +285,27 @@ fn app(inputs: Inputs) -> Outputs {
     .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
     .boxed_local();
 
-    let some_task = output.for_each(move |event| {
-        let kill_child_sender = &mut kill_child_sender;
-        async move {
-        match event {
-            OutputEvent::RunBuilder => {
-                //
-                todo!()
-            }
-            OutputEvent::KillChild(child) => {
-                kill_child_sender
-                    .send(child)
-                    .await
-                    .expect(NEVER_ENDING_STREAM);
-            }
-            OutputEvent::Error(_) => {
-                //
-                todo!()
-            }
-        };
-    }}).boxed_local();
+    let some_task = output
+        .for_each(move |event| {
+            match event {
+                OutputEvent::RunBuilder => {
+                    //
+                    todo!()
+                }
+                OutputEvent::KillChild(child) => {
+                    kill_child_sender
+                        .blocking_send(child)
+                        .expect(NEVER_ENDING_STREAM);
+                }
+                OutputEvent::Error(_) => {
+                    //
+                    todo!()
+                }
+            };
+
+            future::ready(())
+        })
+        .boxed_local();
 
     let launch_browser = if launch_browser {
         future::ready(port).boxed_local()
