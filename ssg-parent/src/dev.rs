@@ -7,7 +7,7 @@ use futures::{
     future::{self, LocalBoxFuture},
     select,
     stream::{self, LocalBoxStream},
-    Future, FutureExt, StreamExt, TryStreamExt,
+    FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
@@ -409,16 +409,20 @@ impl Driver for ChildKillerDriver {
 
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
-impl BrowserLaunchDriver {
-    fn new() -> (Self, LocalBoxFuture<'static, Result<(), std::io::Error>>) {
+impl Driver for BrowserLaunchDriver {
+    type Input = LocalBoxFuture<'static, Port>;
+    type Output =  LocalBoxFuture<'static, Result<(), std::io::Error>>;
+    fn new() -> (Self, Self::Output) {
         let (future, handle) = future_handles::sync::create();
         (Self(handle), future.map(Result::unwrap).boxed_local())
     }
 
-    async fn init(self, launch_browser: impl Future<Output = Port>) {
-        let port = launch_browser.await;
-        let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
-        self.0.complete(open::that(url.as_str()));
-        future::pending::<()>().await;
+    fn init(self, launch_browser: Self::Input) -> LocalBoxFuture<'static, ()> {
+        async move {
+            let port = launch_browser.await;
+            let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+            self.0.complete(open::that(url.as_str()));
+            future::pending::<()>().await;
+        }.boxed_local()
     }
 }
