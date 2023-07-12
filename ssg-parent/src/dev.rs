@@ -1,4 +1,4 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::PathBuf};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -20,13 +20,13 @@ use url::Url;
 
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error)]
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    FsWatch(Rc<notify::Error>),
+    FsWatch(notify::Error),
     #[error(transparent)]
-    Io(Rc<std::io::Error>),
+    Io(std::io::Error),
     #[error("no free port")]
     NoFreePort,
 }
@@ -115,10 +115,10 @@ enum InputEvent {
     ServerError(std::io::Error),
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 enum OutputEvent {
     RunBuilder,
-    KillChild(Rc<Child>),
+    KillChild(Child),
     Error(DevError),
 }
 
@@ -133,7 +133,7 @@ struct Inputs {
 }
 
 struct Outputs {
-    kill_child: LocalBoxStream<'static, Rc<Child>>,
+    kill_child: LocalBoxStream<'static, Child>,
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: LocalBoxFuture<'static, Port>,
     error: LocalBoxFuture<'static, DevError>,
@@ -201,7 +201,7 @@ fn app(inputs: Inputs) -> Outputs {
                     state.builder = BuilderState::None;
                     Some(OutputEvent::RunBuilder)
                 }
-                Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
             },
             InputEvent::BuilderCrateFsChange(result) => match result {
                 Ok(_) => match &mut state.builder {
@@ -211,11 +211,11 @@ fn app(inputs: Inputs) -> Outputs {
                     }
                     BuilderState::Started(_) => {
                         let child = state.builder.killing().unwrap();
-                        Some(OutputEvent::KillChild(Rc::new(child)))
+                        Some(OutputEvent::KillChild(child))
                     }
                     BuilderState::None | BuilderState::Obsolete => None,
                 },
-                Err(error) => Some(OutputEvent::Error(DevError::FsWatch(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::FsWatch(error))),
             },
             InputEvent::BuilderStarted(child) => match child {
                 Ok(child) => match state.builder {
@@ -225,23 +225,23 @@ fn app(inputs: Inputs) -> Outputs {
                     }
                     BuilderState::Obsolete => {
                         state.builder = BuilderState::None;
-                        Some(OutputEvent::KillChild(Rc::new(child)))
+                        Some(OutputEvent::KillChild(child))
                     }
                     BuilderState::Started(_) => {
                         // TODO is this reachable?
                         let current_child = state.builder.killing().unwrap();
                         state.builder = BuilderState::Started(child);
-                        Some(OutputEvent::KillChild(Rc::new(current_child)))
+                        Some(OutputEvent::KillChild(current_child))
                     }
                 },
-                Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
             },
             InputEvent::BrowserLaunched(result) => match result {
                 Ok(_) => None,
-                Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
+                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
             },
             InputEvent::ServerError(error) => {
-                Some(OutputEvent::Error(DevError::Io(Rc::new(error))))
+                Some(OutputEvent::Error(DevError::Io(error)))
             }
         };
 
@@ -379,36 +379,15 @@ impl ChildKillerDriver {
         (child_killer_driver, stream)
     }
 
-    async fn init(self, mut kill_child: LocalBoxStream<'static, Rc<Child>>) {
+    async fn init(self, mut kill_child: LocalBoxStream<'static, Child>) {
         loop {
-            let child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
-            let mut child = rc_try_unwrap_recursive(Err(child)).await;
+            let mut child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
             let result = child.kill().await;
             self.0.send(result).await.unwrap();
         }
     }
 }
 
-// TODO trait method
-fn rc_try_unwrap_recursive<T: 'static>(result: Result<T, Rc<T>>) -> LocalBoxFuture<'static, T> {
-    async {
-        let mut state = result;
-        loop {
-            async {}.await;
-            match state {
-                Ok(inner) => break inner,
-                Err(rc) => {
-                    println!(
-                        "RC TRY UNWRAP RECURSIVE :: count = {}",
-                        Rc::strong_count(&rc)
-                    ); // recursion is fixed, but the strong count stays at 2
-                    state = Rc::try_unwrap(rc);
-                }
-            }
-        }
-    }
-    .boxed_local()
-}
 
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
