@@ -248,7 +248,8 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    let (kill_child_sender, kill_child_receiver)  = mpsc::channel(1);
+    let (kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
+    let (start_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
 
     let kill_child = fn_stream(|emitter| async move {
         loop {
@@ -258,21 +259,35 @@ fn app(inputs: Inputs) -> Outputs {
     })
     .boxed_local();
 
-    output.for_each(|event| async move);
+    let start_builder = fn_stream(|emitter| async move {
+        loop {
+            let value = start_builder_receiver
+                .recv()
+                .await
+                .expect(NEVER_ENDING_STREAM);
+            emitter.emit(value).await;
+        }
+    })
+    .boxed_local();
 
-
-    let start_builder = output
-        .clone()
-        .filter_map(|output| {er_map(|output| {
-            let output = if let OutputEvent::RunBuilder = output {
-                Some(())
-            } else {
-                None
-            };
-
-            future::ready(output)
-        })
-        .boxed_local();
+    output.for_each(|event| async {
+        match event {
+            OutputEvent::RunBuilder => {
+                //
+                todo!()
+            }
+            OutputEvent::KillChild(child) => {
+                kill_child_sender
+                    .send(child)
+                    .await
+                    .expect(NEVER_ENDING_STREAM);
+            }
+            OutputEvent::Error(_) => {
+                //
+                todo!()
+            }
+        };
+    });
 
     let error = output
         .filter_map(|output| {
