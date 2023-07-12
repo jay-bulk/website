@@ -250,6 +250,7 @@ fn app(inputs: Inputs) -> Outputs {
 
     let (kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
     let (start_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
+    let (error_sender, mut error_receiver) = mpsc::channel(1);
 
     let kill_child = fn_stream(|emitter| async move {
         loop {
@@ -270,6 +271,24 @@ fn app(inputs: Inputs) -> Outputs {
     })
     .boxed_local();
 
+    let error = fn_stream(|emitter| async move {
+        loop {
+            let value = error_receiver
+                .recv()
+                .await
+                .expect(NEVER_ENDING_STREAM);
+            emitter.emit(value).await;
+        }
+    }).boxed_local().into_future()
+        .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
+        .boxed_local();
+
+    let launch_browser = if launch_browser {
+        future::ready(port).boxed_local()
+    } else {
+        future::pending().boxed_local()
+    };
+
     output.for_each(|event| async {
         match event {
             OutputEvent::RunBuilder => {
@@ -289,25 +308,7 @@ fn app(inputs: Inputs) -> Outputs {
         };
     });
 
-    let error = output
-        .filter_map(|output| {
-            let output = if let OutputEvent::Error(error) = output {
-                Some(error)
-            } else {
-                None
-            };
 
-            future::ready(output)
-        })
-        .into_future()
-        .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
-        .boxed_local();
-
-    let launch_browser = if launch_browser {
-        future::ready(port).boxed_local()
-    } else {
-        future::pending().boxed_local()
-    };
 
     Outputs {
         kill_child,
