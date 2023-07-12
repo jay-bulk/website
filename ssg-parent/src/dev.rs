@@ -327,8 +327,11 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 trait Driver {
-    type 
-    fn new_driver
+    type Input;
+    type Output;
+    type Ptr<T>;
+    fn new() -> (Self, Self::Output);
+    fn init(self, input: Self::Input) -> Ptr<dyn Future<Output = ()>>
 }
 
 // driver_a
