@@ -289,21 +289,36 @@ fn app(inputs: Inputs) -> Outputs {
         .for_each(move |event| {
             match event {
                 OutputEvent::RunBuilder => {
-                    //
-                    todo!()
+                    let sender_clone = start_builder_sender.clone();
+                    async move {
+                        sender_clone
+                            .send(error)
+                            .await
+                            .expect(NEVER_ENDING_STREAM);
+                    }
+                    .boxed_local()
                 }
                 OutputEvent::KillChild(child) => {
-                    kill_child_sender
-                        .blocking_send(child)
-                        .expect(NEVER_ENDING_STREAM);
+                    let sender_clone = kill_child_sender.clone();
+                    async move {
+                        sender_clone
+                            .send(child)
+                            .await
+                            .expect(NEVER_ENDING_STREAM);
+                    }
+                    .boxed_local()
                 }
-                OutputEvent::Error(_) => {
-                    //
-                    todo!()
+                OutputEvent::Error(error) => {
+                    let sender_clone = error_sender.clone();
+                    async move {
+                        sender_clone
+                            .send(error)
+                            .await
+                            .expect(NEVER_ENDING_STREAM);
+                    }
+                    .boxed_local()
                 }
-            };
-
-            future::ready(())
+            }
         })
         .boxed_local();
 
