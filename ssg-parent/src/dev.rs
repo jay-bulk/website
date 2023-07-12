@@ -18,6 +18,12 @@ use tokio::{
 };
 use url::Url;
 
+
+// TODO IS HERE HERHEHREHREHRH
+//    let url = Url::parse(&format!("http://{LOCALHOST}:{}", *LOCAL_DEV_PORT)).unwrap();
+//    let message = format!("\nServer started at {url}\n").blue();
+//    eprintln!("{message}");
+
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
 #[derive(Debug, Error)]
