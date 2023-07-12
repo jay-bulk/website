@@ -251,8 +251,8 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    let (mut kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
-    let (start_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
+    let (kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
+    let (run_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
     let (error_sender, mut error_receiver) = mpsc::channel(1);
 
     let kill_child = fn_stream(|emitter| async move {
@@ -265,11 +265,11 @@ fn app(inputs: Inputs) -> Outputs {
 
     let run_builder = fn_stream(|emitter| async move {
         loop {
-            let value = start_builder_receiver
+            start_builder_receiver
                 .recv()
                 .await
                 .expect(NEVER_ENDING_STREAM);
-            emitter.emit(value).await;
+            emitter.emit(()).await;
         }
     })
     .boxed_local();
@@ -286,38 +286,27 @@ fn app(inputs: Inputs) -> Outputs {
     .boxed_local();
 
     let some_task = output
-        .for_each(move |event| {
-            match event {
-                OutputEvent::RunBuilder => {
-                    let sender_clone = start_builder_sender.clone();
-                    async move {
-                        sender_clone
-                            .send(error)
-                            .await
-                            .expect(NEVER_ENDING_STREAM);
-                    }
-                    .boxed_local()
+        .for_each(move |event| match event {
+            OutputEvent::RunBuilder => {
+                let sender_clone = run_builder_sender.clone();
+                async move {
+                    sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
                 }
-                OutputEvent::KillChild(child) => {
-                    let sender_clone = kill_child_sender.clone();
-                    async move {
-                        sender_clone
-                            .send(child)
-                            .await
-                            .expect(NEVER_ENDING_STREAM);
-                    }
-                    .boxed_local()
+                .boxed_local()
+            }
+            OutputEvent::KillChild(child) => {
+                let sender_clone = kill_child_sender.clone();
+                async move {
+                    sender_clone.send(child).await.expect(NEVER_ENDING_STREAM);
                 }
-                OutputEvent::Error(error) => {
-                    let sender_clone = error_sender.clone();
-                    async move {
-                        sender_clone
-                            .send(error)
-                            .await
-                            .expect(NEVER_ENDING_STREAM);
-                    }
-                    .boxed_local()
+                .boxed_local()
+            }
+            OutputEvent::Error(error) => {
+                let sender_clone = error_sender.clone();
+                async move {
+                    sender_clone.send(error).await.expect(NEVER_ENDING_STREAM);
                 }
+                .boxed_local()
             }
         })
         .boxed_local();
@@ -331,8 +320,8 @@ fn app(inputs: Inputs) -> Outputs {
     Outputs {
         kill_child,
         run_builder,
-        error,
         launch_browser,
+        error,
         some_task,
     }
 }
@@ -413,7 +402,7 @@ fn rc_try_unwrap_recursive<T: 'static>(result: Result<T, Rc<T>>) -> LocalBoxFutu
                         "RC TRY UNWRAP RECURSIVE :: count = {}",
                         Rc::strong_count(&rc)
                     ); // recursion is fixed, but the strong count stays at 2
-                    state = Rc::try_unwrap(rc)
+                    state = Rc::try_unwrap(rc);
                 }
             }
         }
@@ -433,6 +422,6 @@ impl BrowserLaunchDriver {
         let port = launch_browser.await;
         let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
         self.0.complete(open::that(url.as_str()));
-        future::pending().await
+        future::pending::<()>().await;
     }
 }
