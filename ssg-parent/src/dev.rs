@@ -326,6 +326,10 @@ fn app(inputs: Inputs) -> Outputs {
     }
 }
 
+trait Driver {
+    fn new_driver
+}
+
 #[derive(Debug)]
 struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
 
