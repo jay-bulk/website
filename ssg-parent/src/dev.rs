@@ -1,4 +1,4 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -240,9 +240,7 @@ fn app(inputs: Inputs) -> Outputs {
                 Ok(_) => None,
                 Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
             },
-            InputEvent::ServerError(error) => {
-                Some(OutputEvent::Error(DevError::Io(error)))
-            }
+            InputEvent::ServerError(error) => Some(OutputEvent::Error(DevError::Io(error))),
         };
 
         future::ready(Some(emit))
@@ -326,25 +324,29 @@ fn app(inputs: Inputs) -> Outputs {
     }
 }
 
-trait Driver {
+trait Driver: Sized {
     type Input;
     type Output;
-    type Ptr<T>;
     fn new() -> (Self, Self::Output);
-    fn init(self, input: Self::Input) -> Ptr<dyn Future<Output = ()>>
+    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()>;
 }
-
-// driver_a
-// |
-// app
-// |
-// driver_a
 
 #[derive(Debug)]
 struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
 
 impl BuilderDriver {
-    fn new() -> (Self, LocalBoxStream<'static, Result<Child, std::io::Error>>) {
+    fn cargo_run_builder() -> Result<Child, std::io::Error> {
+        Command::new("cargo")
+            .args(["run", "--package", BUILDER_CRATE_NAME])
+            .spawn()
+    }
+}
+
+impl Driver for BuilderDriver {
+    type Input = LocalBoxStream<'static, ()>;
+    type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
+
+    fn new() -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
@@ -359,25 +361,25 @@ impl BuilderDriver {
         (builder_driver, stream)
     }
 
-    async fn init(self, mut start_builder: LocalBoxStream<'static, ()>) {
-        loop {
-            start_builder.next().await.unwrap();
-            let child = Self::cargo_run_builder();
-            self.0.send(child).await.unwrap();
+    fn init(self, mut start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {
+        async move {
+            loop {
+                start_builder.next().await.unwrap();
+                let child = Self::cargo_run_builder();
+                self.0.send(child).await.unwrap();
+            }
         }
-    }
-
-    fn cargo_run_builder() -> Result<Child, std::io::Error> {
-        Command::new("cargo")
-            .args(["run", "--package", BUILDER_CRATE_NAME])
-            .spawn()
+        .boxed_local()
     }
 }
 
 struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
-impl ChildKillerDriver {
-    fn new() -> (Self, LocalBoxStream<'static, Result<(), std::io::Error>>) {
+impl Driver for ChildKillerDriver {
+    type Input = LocalBoxStream<'static, Child>;
+    type Output = LocalBoxStream<'static, Result<(), std::io::Error>>;
+
+    fn new() -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
 
         let stream = fn_stream(|emitter| async move {
@@ -393,15 +395,17 @@ impl ChildKillerDriver {
         (child_killer_driver, stream)
     }
 
-    async fn init(self, mut kill_child: LocalBoxStream<'static, Child>) {
-        loop {
-            let mut child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
-            let result = child.kill().await;
-            self.0.send(result).await.unwrap();
+    fn init(self, mut kill_child: Self::Input) -> LocalBoxFuture<'static, ()> {
+        async move {
+            loop {
+                let mut child = kill_child.next().await.expect(NEVER_ENDING_STREAM);
+                let result = child.kill().await;
+                self.0.send(result).await.unwrap();
+            }
         }
+        .boxed_local()
     }
 }
-
 
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
