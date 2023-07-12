@@ -11,7 +11,6 @@ use futures::{
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
-use shared_stream::Share;
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
@@ -178,7 +177,9 @@ fn app(inputs: Inputs) -> Outputs {
     let initial = stream::once(future::ready(OutputEvent::RunBuilder));
 
     let reaction = stream::select_all([
-        stream::once(server_task).map(InputEvent::ServerError).boxed_local(),
+        stream::once(server_task)
+            .map(InputEvent::ServerError)
+            .boxed_local(),
         child_killed.map(InputEvent::BuilderKilled).boxed_local(),
         builder_crate_fs_change
             .map(InputEvent::BuilderCrateFsChange)
@@ -236,27 +237,29 @@ fn app(inputs: Inputs) -> Outputs {
                 Ok(_) => None,
                 Err(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))),
             },
-            InputEvent::ServerError(error) => Some(OutputEvent::Error(DevError::Io(Rc::new(error)))) 
+            InputEvent::ServerError(error) => {
+                Some(OutputEvent::Error(DevError::Io(Rc::new(error))))
+            }
         };
 
         future::ready(Some(emit))
     })
     .filter_map(future::ready);
 
-    let output = initial.chain(reaction).shared();
+    let output = initial.chain(reaction);
 
-    let kill_child = output
-        .clone()
-        .filter_map(|output| {
-            let child = if let OutputEvent::KillChild(child) = output {
-                Some(child)
-            } else {
-                None
-            };
+    let (kill_child_sender, kill_child_receiver)  = mpsc::channel(1);
 
-            future::ready(child)
-        })
-        .boxed_local();
+    let kill_child = fn_stream(|emitter| async move {
+        loop {
+            let value = kill_child_receiver.recv().await.expect(NEVER_ENDING_STREAM);
+            emitter.emit(value).await;
+        }
+    })
+    .boxed_local();
+
+    output.for_each(f);
+
 
     let start_builder = output
         .clone()
@@ -367,13 +370,16 @@ fn rc_try_unwrap_recursive<T: 'static>(result: Result<T, Rc<T>>) -> LocalBoxFutu
     async {
         let mut state = result;
         loop {
-            async{}.await;
+            async {}.await;
             match state {
                 Ok(inner) => break inner,
                 Err(rc) => {
-                    println!("RC TRY UNWRAP RECURSIVE :: count = {}", Rc::strong_count(&rc)); // recursion is fixed, but the strong count stays at 2
+                    println!(
+                        "RC TRY UNWRAP RECURSIVE :: count = {}",
+                        Rc::strong_count(&rc)
+                    ); // recursion is fixed, but the strong count stays at 2
                     state = Rc::try_unwrap(rc)
-                },
+                }
             }
         }
     }
