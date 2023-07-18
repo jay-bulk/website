@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -450,7 +450,7 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct StderrDriver;
+struct StderrDriver(std::io::Stdout);
 
 #[derive(Debug)]
 struct StderrOutput(String);
@@ -461,17 +461,17 @@ impl StderrOutput {
 }
 
 impl Driver for StderrDriver {
-    type Input = LocalBoxStream<'static, StderrOutput>;
+    type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
 
     fn new() -> (Self, Self::Output) {
-        (Self, ())
+        (Self(std::io::stdout()), ())
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
         input
-            .for_each(|each| {
-                eprint!("{}", each.0);
+            .for_each(|bytes| {
+                self.0.write(buf);
                 futures::future::ready(())
             })
             .boxed_local()
