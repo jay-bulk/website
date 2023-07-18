@@ -1,4 +1,4 @@
-use std::{path::PathBuf, borrow::BorrowMut};
+use std::{borrow::BorrowMut, path::PathBuf};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -17,7 +17,6 @@ use tokio::{
     sync::mpsc,
 };
 use url::Url;
-
 
 // TODO IS HERE HERHEHREHREHRH
 //    let url = Url::parse(&format!("http://{LOCALHOST}:{}", *LOCAL_DEV_PORT)).unwrap();
@@ -417,7 +416,7 @@ struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl Driver for BrowserLaunchDriver {
     type Input = LocalBoxFuture<'static, Port>;
-    type Output =  LocalBoxFuture<'static, Result<(), std::io::Error>>;
+    type Output = LocalBoxFuture<'static, Result<(), std::io::Error>>;
     fn new() -> (Self, Self::Output) {
         let (future, handle) = future_handles::sync::create();
         (Self(handle), future.map(Result::unwrap).boxed_local())
@@ -429,7 +428,8 @@ impl Driver for BrowserLaunchDriver {
             let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
             self.0.complete(open::that(url.as_str()));
             future::pending::<()>().await;
-        }.boxed_local()
+        }
+        .boxed_local()
     }
 }
 
@@ -446,9 +446,11 @@ impl Driver for StderrDriver {
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        input.for_each(|each| {
-            eprint!("{}", each.0);
-            async{}
-        }).boxed_local()
+        input
+            .for_each(|each| {
+                eprint!("{}", each.0);
+                futures::future::ready(())
+            })
+            .boxed_local()
     }
 }
