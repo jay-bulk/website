@@ -3565,6 +3565,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "reactive"
+version = "0.1.0"
+dependencies = [
+ "futures",
+]
+
+[[package]]
 name = "readext"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4220,6 +4227,7 @@ dependencies = [
  "once_cell",
  "open",
  "portpicker",
+ "reactive",
  "reqwest",
  "thiserror",
  "tokio",
