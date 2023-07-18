@@ -141,7 +141,7 @@ struct Outputs {
     stderr: LocalBoxStream<'static, StderrOutput>,
     kill_child: LocalBoxStream<'static, Child>,
     run_builder: LocalBoxStream<'static, ()>,
-    launch_browser: LocalBoxFuture<'static, Port>,
+    launch_browser: LocalBoxFuture<'static, Url>,
     error: LocalBoxFuture<'static, DevError>,
     some_task: LocalBoxFuture<'static, ()>,
 }
@@ -339,7 +339,7 @@ fn app(inputs: Inputs) -> Outputs {
         .boxed_local();
 
     let launch_browser = if launch_browser {
-        future::ready(port).boxed_local()
+        future::ready(url).boxed_local()
     } else {
         future::pending().boxed_local()
     };
@@ -440,16 +440,16 @@ impl Driver for ChildKillerDriver {
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl Driver for BrowserLaunchDriver {
-    type Input = LocalBoxFuture<'static, Port>;
+    type Input = LocalBoxFuture<'static, Url>;
     type Output = LocalBoxFuture<'static, Result<(), std::io::Error>>;
     fn new() -> (Self, Self::Output) {
         let (future, handle) = future_handles::sync::create();
         (Self(handle), future.map(Result::unwrap).boxed_local())
     }
 
-    fn init(self, launch_browser: Self::Input) -> LocalBoxFuture<'static, ()> {
+    fn init(self, url: Self::Input) -> LocalBoxFuture<'static, ()> {
         async move {
-            self.0.complete(open::that(url.as_str()));
+            self.0.complete(open::that(url.await.as_str()));
             future::pending::<()>().await;
         }
         .boxed_local()
