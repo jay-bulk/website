@@ -76,6 +76,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let (builder_driver, builder_started) = BuilderDriver::new();
     let (child_killer_driver, child_killed) = ChildKillerDriver::new();
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
+    let (stderr_driver, _) = StderrDriver::new();
 
     let inputs = Inputs {
         server_task,
@@ -90,6 +91,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let outputs = app(inputs);
 
     let Outputs {
+        stderr,
         launch_browser,
         error: app_error,
         kill_child,
@@ -99,13 +101,14 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_killer_driver.init(kill_child);
-    let browser_launcher_task = browser_launch_driver.init(launch_browser);
+    let browser_launcher_driver_task = browser_launch_driver.init(launch_browser);
+    let stderr_driver_task = stderr_driver.init(stderr);
 
     let app_error = select! {
         error = app_error.fuse() => error,
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
-        _ = browser_launcher_task.fuse() => unreachable!(),
+        _ = browser_launcher_driver_task.fuse() => unreachable!(),
         _ = some_task.fuse() => unreachable!(),
     };
 
@@ -122,6 +125,7 @@ enum InputEvent {
 
 #[derive(Debug)]
 enum OutputEvent {
+    Stderr(StderrOutput),
     RunBuilder,
     KillChild(Child),
     Error(DevError),
@@ -138,7 +142,7 @@ struct Inputs {
 }
 
 struct Outputs {
-    stderr: LocalBoxStream<'static, StderrOutput> 
+    stderr: LocalBoxStream<'static, StderrOutput>,
     kill_child: LocalBoxStream<'static, Child>,
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: LocalBoxFuture<'static, Port>,
@@ -258,6 +262,7 @@ fn app(inputs: Inputs) -> Outputs {
     let (kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
     let (run_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
     let (error_sender, mut error_receiver) = mpsc::channel(1);
+    let (stderr_sender, mut stderr_receiver) = mpsc::channel(1);
 
     let kill_child = fn_stream(|emitter| async move {
         loop {
@@ -289,6 +294,14 @@ fn app(inputs: Inputs) -> Outputs {
     .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
     .boxed_local();
 
+    let stderr = fn_stream(|emitter| async move {
+        loop {
+            let value = stderror_receiver.recv().await.expect(NEVER_ENDING_STREAM);
+            emitter.emit(value).await;
+        }
+    })
+    .boxed_local();
+
     let some_task = output
         .for_each(move |event| match event {
             OutputEvent::RunBuilder => {
@@ -312,6 +325,13 @@ fn app(inputs: Inputs) -> Outputs {
                 }
                 .boxed_local()
             }
+            OutputEvent::Stderr(output) => {
+                let sender_clone = stderr_sender.clone();
+                async move {
+                    sender_clone.send(output).await.expect(NEVER_ENDING_STREAM);
+                }
+                .boxed_local()
+            }
         })
         .boxed_local();
 
@@ -322,6 +342,7 @@ fn app(inputs: Inputs) -> Outputs {
     };
 
     Outputs {
+        stderr,
         kill_child,
         run_builder,
         launch_browser,
@@ -436,6 +457,7 @@ impl Driver for BrowserLaunchDriver {
 
 struct StderrDriver;
 
+#[derive(Debug)]
 struct StderrOutput(String);
 
 impl Driver for StderrDriver {
