@@ -184,9 +184,8 @@ fn app(inputs: Inputs) -> Outputs {
     } = inputs;
 
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
-    let message = format!("\nServer started at {url}\n").blue();
+    let message = format!("\nServer started at {url}\n").blue().to_string();
 
-    let initial = stream::once(future::ready(OutputEvent::RunBuilder));
     let initial = stream::iter([
         OutputEvent::RunBuilder,
         OutputEvent::Stderr(StderrOutput::new(message)),
@@ -461,7 +460,7 @@ struct StderrDriver;
 #[derive(Debug)]
 struct StderrOutput(String);
 impl StderrOutput {
-    fn new(message: colored::ColoredString) -> StderrOutput {
+    fn new(message: impl AsRef) -> StderrOutput {
         todo!()
     }
 }
