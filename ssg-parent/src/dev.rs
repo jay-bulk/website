@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, borrow::BorrowMut};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -442,10 +442,13 @@ impl Driver for StderrDriver {
     type Output = ();
 
     fn new() -> (Self, Self::Output) {
-
+        (Self, ())
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        todo!()
+        input.for_each(|each| {
+            eprint!("{}", each.0);
+            async{}
+        }).boxed_local()
     }
 }
