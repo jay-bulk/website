@@ -432,3 +432,20 @@ impl Driver for BrowserLaunchDriver {
         }.boxed_local()
     }
 }
+
+struct StderrDriver;
+
+struct StderrOutput(String);
+
+impl Driver for StderrDriver {
+    type Input = LocalBoxStream<'static, StderrOutput>;
+    type Output = ();
+
+    fn new() -> (Self, Self::Output) {
+
+    }
+
+    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
+        todo!()
+    }
+}
