@@ -138,6 +138,7 @@ struct Inputs {
 }
 
 struct Outputs {
+    stderr: LocalBoxStream<'static, StderrOutput> 
     kill_child: LocalBoxStream<'static, Child>,
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: LocalBoxFuture<'static, Port>,
