@@ -2,6 +2,7 @@ use std::{borrow::BorrowMut, path::PathBuf};
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
+use colored::Colorize;
 use future_handles::sync::CompleteHandle;
 use futures::{
     future::{self, LocalBoxFuture},
@@ -17,11 +18,6 @@ use tokio::{
     sync::mpsc,
 };
 use url::Url;
-
-// TODO IS HERE HERHEHREHREHRH
-//    let url = Url::parse(&format!("http://{LOCALHOST}:{}", *LOCAL_DEV_PORT)).unwrap();
-//    let message = format!("\nServer started at {url}\n").blue();
-//    eprintln!("{message}");
 
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
@@ -187,10 +183,13 @@ fn app(inputs: Inputs) -> Outputs {
         browser_launch,
     } = inputs;
 
+    let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+    let message = format!("\nServer started at {url}\n").blue();
+
     let initial = stream::once(future::ready(OutputEvent::RunBuilder));
     let initial = stream::iter([
         OutputEvent::RunBuilder,
-        OutputEvent::Stderr(StderrOutput::new()),
+        OutputEvent::Stderr(StderrOutput::new(message)),
     ]);
 
     let reaction = stream::select_all([
@@ -450,8 +449,6 @@ impl Driver for BrowserLaunchDriver {
 
     fn init(self, launch_browser: Self::Input) -> LocalBoxFuture<'static, ()> {
         async move {
-            let port = launch_browser.await;
-            let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
             self.0.complete(open::that(url.as_str()));
             future::pending::<()>().await;
         }
@@ -463,6 +460,11 @@ struct StderrDriver;
 
 #[derive(Debug)]
 struct StderrOutput(String);
+impl StderrOutput {
+    fn new(message: colored::ColoredString) -> StderrOutput {
+        todo!()
+    }
+}
 
 impl Driver for StderrDriver {
     type Input = LocalBoxStream<'static, StderrOutput>;
