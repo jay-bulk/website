@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, path::PathBuf};
+use std::path::PathBuf;
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -104,6 +104,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         error = app_error.fuse() => error,
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
+        _ = stderr_driver_task.fuse() => unreachable!(),
         _ = browser_launcher_driver_task.fuse() => unreachable!(),
         _ = some_task.fuse() => unreachable!(),
     };
@@ -460,8 +461,8 @@ struct StderrDriver;
 #[derive(Debug)]
 struct StderrOutput(String);
 impl StderrOutput {
-    fn new(message: impl AsRef) -> StderrOutput {
-        todo!()
+    fn new(message: impl AsRef<str>) -> StderrOutput {
+        Self(message.as_ref().to_owned())
     }
 }
 

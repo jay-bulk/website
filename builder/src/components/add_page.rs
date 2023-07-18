@@ -34,7 +34,7 @@ impl Render for AddPage {
 
         let content = html! {
             div class=(*PROSE_CLASSES) {
-                h1 { "Add a mob" }
+                h1 { " mob" }
                 p {
                     "Mobs are specified in files in "
                     a href=(existing_mobs_url) {
