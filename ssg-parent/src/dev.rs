@@ -354,13 +354,6 @@ fn app(inputs: Inputs) -> Outputs {
     }
 }
 
-trait Driver: Sized {
-    type Input;
-    type Output;
-    fn new() -> (Self, Self::Output);
-    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()>;
-}
-
 #[derive(Debug)]
 struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
 
