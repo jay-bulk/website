@@ -188,6 +188,10 @@ fn app(inputs: Inputs) -> Outputs {
     } = inputs;
 
     let initial = stream::once(future::ready(OutputEvent::RunBuilder));
+    let initial = stream::iter([
+        OutputEvent::RunBuilder,
+        OutputEvent::Stderr(StderrOutput::new()),
+    ]);
 
     let reaction = stream::select_all([
         stream::once(server_task)
