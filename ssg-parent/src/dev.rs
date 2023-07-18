@@ -12,6 +12,7 @@ use futures::{
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
+use reactive::Driver;
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
