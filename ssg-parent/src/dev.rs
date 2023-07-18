@@ -296,7 +296,7 @@ fn app(inputs: Inputs) -> Outputs {
 
     let stderr = fn_stream(|emitter| async move {
         loop {
-            let value = stderror_receiver.recv().await.expect(NEVER_ENDING_STREAM);
+            let value = stderr_receiver.recv().await.expect(NEVER_ENDING_STREAM);
             emitter.emit(value).await;
         }
     })
