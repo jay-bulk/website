@@ -1,4 +1,4 @@
-use std::{io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
@@ -6,6 +6,7 @@ use colored::Colorize;
 use future_handles::sync::CompleteHandle;
 use futures::{
     future::{self, LocalBoxFuture},
+    io::{AsyncWrite, AsyncWriteExt},
     select,
     stream::{self, LocalBoxStream},
     FutureExt, StreamExt, TryStreamExt,
@@ -73,7 +74,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let (builder_driver, builder_started) = BuilderDriver::new();
     let (child_killer_driver, child_killed) = ChildKillerDriver::new();
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
-    let (stderr_driver, _) = StderrDriver::new();
+    let (stderr_driver, _) = WriteDriver::new();
 
     let inputs = Inputs {
         server_task,
@@ -450,17 +451,16 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct StderrDriver(std::io::Stdout);
+struct WriteDriver(tokio::io::std);
 
 #[derive(Debug)]
-struct StderrOutput(String);
 impl StderrOutput {
     fn new(message: impl AsRef<str>) -> StderrOutput {
         Self(message.as_ref().to_owned())
     }
 }
 
-impl Driver for StderrDriver {
+impl Driver for WriteDriver {
     type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
 
@@ -470,8 +470,8 @@ impl Driver for StderrDriver {
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
         input
-            .for_each(|bytes| {
-                self.0.write(buf);
+            .for_each(|bytes| async move {
+                self.0.write_all(&bytes);
                 futures::future::ready(())
             })
             .boxed_local()
