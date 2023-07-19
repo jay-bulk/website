@@ -6,7 +6,6 @@ use colored::Colorize;
 use future_handles::sync::CompleteHandle;
 use futures::{
     future::{self, LocalBoxFuture},
-    io::{AsyncWrite, AsyncWriteExt},
     select,
     stream::{self, LocalBoxStream},
     FutureExt, StreamExt, TryStreamExt,
@@ -16,7 +15,7 @@ use portpicker::Port;
 use reactive::Driver;
 use thiserror::Error;
 use tokio::{
-    io::{stderr, Stderr},
+    io::{stderr, AsyncWrite},
     process::{Child, Command},
     sync::mpsc,
 };
@@ -101,7 +100,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_killer_driver.init(kill_child);
     let browser_launcher_driver_task = browser_launch_driver.init(launch_browser);
-    let stderr_driver_task = stderr_driver.init(stderr);
+    let stderr_driver_task = stderr_driver.init();
 
     let app_error = select! {
         error = app_error.fuse() => error,
@@ -125,7 +124,7 @@ enum InputEvent {
 
 #[derive(Debug)]
 enum OutputEvent {
-    Stderr(StderrOutput),
+    Stderr(String),
     RunBuilder,
     KillChild(Child),
     Error(DevError),
@@ -142,7 +141,7 @@ struct Inputs {
 }
 
 struct Outputs {
-    stderr: LocalBoxStream<'static, StderrOutput>,
+    stderr: LocalBoxStream<'static, String>,
     kill_child: LocalBoxStream<'static, Child>,
     run_builder: LocalBoxStream<'static, ()>,
     launch_browser: LocalBoxFuture<'static, Url>,
@@ -190,10 +189,7 @@ fn app(inputs: Inputs) -> Outputs {
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
     let message = format!("\nServer started at {url}\n").blue().to_string();
 
-    let initial = stream::iter([
-        OutputEvent::RunBuilder,
-        OutputEvent::Stderr(StderrOutput::new(message)),
-    ]);
+    let initial = stream::iter([OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
 
     let reaction = stream::select_all([
         stream::once(server_task)
@@ -455,10 +451,10 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteDriver<W: AsyncWrite>(W);
+struct WriteDriver<T: AsyncWrite>(T);
 
-impl<W: AsyncWrite> Driver for WriteDriver<W> {
-    type Init = W;
+impl<T: AsyncWrite> Driver for WriteDriver<T> {
+    type Init = T;
     type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
 
