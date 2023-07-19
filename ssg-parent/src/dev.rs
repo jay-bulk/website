@@ -15,7 +15,7 @@ use portpicker::Port;
 use reactive::Driver;
 use thiserror::Error;
 use tokio::{
-    io::{stderr, AsyncWrite},
+    io::{stderr, AsyncWrite, AsyncWriteExt},
     process::{Child, Command},
     sync::mpsc,
 };
@@ -459,15 +459,12 @@ impl<T: AsyncWrite> Driver for WriteDriver<T> {
     type Output = ();
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
-        (Self(std::io::stdout()), ())
+        (Self(init), ())
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
         input
-            .for_each(|bytes| async move {
-                self.0.write_all(&bytes);
-                futures::future::ready(())
-            })
+            .for_each(|bytes| self.0.write_all(&bytes))
             .boxed_local()
     }
 }
