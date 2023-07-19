@@ -100,7 +100,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_killer_driver.init(kill_child);
     let browser_launcher_driver_task = browser_launch_driver.init(launch_browser);
-    let stderr_driver_task = stderr_driver.init();
+    let stderr_driver_task = stderr_driver.init(stderr.map(|s| s.into_bytes()).boxed_local());
 
     let app_error = select! {
         error = app_error.fuse() => error,
