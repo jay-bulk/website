@@ -70,7 +70,10 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_started) = StaticCommandDriver::new(());
+    let mut cargo_run_builder = Command::new("cargo");
+    cargo_run_builder.args(["run", "--package", BUILDER_CRATE_NAME]);
+
+    let (builder_driver, builder_started) = StaticCommandDriver::new(cargo_run_builder);
     let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
     let (eprintln_driver, _) = EprintlnDriver::new(());
@@ -352,48 +355,6 @@ fn app(inputs: Inputs) -> Outputs {
     }
 }
 
-#[derive(Debug)]
-struct StaticCommandDriver(Command, mpsc::Sender<Result<Child, std::io::Error>>);
-
-impl StaticCommandDriver {
-    fn cargo_run_builder() -> Result<Child, std::io::Error> {
-        Command::new("cargo")
-            .args(["run", "--package", BUILDER_CRATE_NAME])
-            .spawn()
-    }
-}
-
-impl Driver for StaticCommandDriver {
-    type Init = ();
-    type Input = LocalBoxStream<'static, ()>;
-    type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
-
-    fn new(_init: Self::Init) -> (Self, Self::Output) {
-        let (sender, mut receiver) = mpsc::channel(1);
-        let stream = fn_stream(|emitter| async move {
-            loop {
-                let input = receiver.recv().await.unwrap();
-                emitter.emit(input).await;
-            }
-        })
-        .boxed();
-
-        let builder_driver = Self(sender);
-
-        (builder_driver, stream)
-    }
-
-    fn init(self, mut start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {
-        async move {
-            loop {
-                start_builder.next().await.unwrap();
-                let child = Self::cargo_run_builder();
-                self.0.send(child).await.unwrap();
-            }
-        }
-        .boxed_local()
-    }
-}
 
 struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 

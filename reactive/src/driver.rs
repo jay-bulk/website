@@ -1,7 +1,8 @@
-pub mod eprintln;
+mod eprintln;
+mod static_command;
 
-
-
+pub use eprintln::EprintlnDriver;
+pub use static_command::StaticCommandDriver;
 
 use futures::future::LocalBoxFuture;
 
