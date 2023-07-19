@@ -74,7 +74,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let (builder_driver, builder_started) = BuilderDriver::new(());
     let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
-    let (stderr_driver, _) = WriteAllDriver::new(stderr());
+    let (stderr_driver, _) = EprintlnDriver::new(stderr());
 
     let inputs = Inputs {
         server_task,
@@ -451,20 +451,16 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteAllDriver<T: AsyncWrite + Unpin>(T, mpsc::Sender<std::io::Result<()>>);
+struct EprintlnDriver;
 
-impl<T: AsyncWrite + Unpin + 'static> Driver for WriteAllDriver<T> {
-    type Init = T;
-    type Input = LocalBoxStream<'static, Vec<u8>>;
-    type Output = LocalBoxStream<'static, std::io::Result<()>>;
+impl Driver for EprintlnDriver {
+    type Init = ();
+    type Input = LocalBoxStream<'static, String>;
+    type Output = ();
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel(1);
-        let output = fn_stream(|emitter| async {
-            loop {
-                
-            }
-        });
+        let output = fn_stream(|emitter| async { loop {} });
         (Self(init, sender), output)
     }
 
