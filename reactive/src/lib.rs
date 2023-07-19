@@ -1,7 +1,7 @@
 use futures::future::LocalBoxFuture;
 
 pub trait Driver: Sized {
-    type Init = ();
+    type Init;
     type Input;
     type Output;
 

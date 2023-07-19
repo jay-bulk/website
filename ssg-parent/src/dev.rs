@@ -16,6 +16,7 @@ use portpicker::Port;
 use reactive::Driver;
 use thiserror::Error;
 use tokio::{
+    io::{stderr, Stderr},
     process::{Child, Command},
     sync::mpsc,
 };
@@ -74,7 +75,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let (builder_driver, builder_started) = BuilderDriver::new(());
     let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
-    let (stderr_driver, _) = WriteDriver::new();
+    let (stderr_driver, _) = WriteDriver::new(stderr());
 
     let inputs = Inputs {
         server_task,
@@ -372,7 +373,7 @@ impl Driver for BuilderDriver {
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
 
-    fn new(init : Self::Init) -> (Self, Self::Output) {
+    fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
@@ -406,7 +407,7 @@ impl Driver for ChildKillerDriver {
     type Input = LocalBoxStream<'static, Child>;
     type Output = LocalBoxStream<'static, Result<(), std::io::Error>>;
 
-    fn new(init : Self::Init) -> (Self, Self::Output) {
+    fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
 
         let stream = fn_stream(|emitter| async move {
@@ -454,9 +455,9 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteDriver<W : AsyncWrite>(W);
+struct WriteDriver<W: AsyncWrite>(W);
 
-impl<W : AsyncWrite> Driver for WriteDriver<W> {
+impl<W: AsyncWrite> Driver for WriteDriver<W> {
     type Init = W;
     type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
