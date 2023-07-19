@@ -451,9 +451,9 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteDriver<T: AsyncWrite>(T);
+struct WriteDriver<T: AsyncWrite + Unpin>(T);
 
-impl<T: AsyncWrite> Driver for WriteDriver<T> {
+impl<T: AsyncWrite + Unpin + 'static> Driver for WriteDriver<T> {
     type Init = T;
     type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
@@ -462,9 +462,10 @@ impl<T: AsyncWrite> Driver for WriteDriver<T> {
         (Self(init), ())
     }
 
-    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
+    fn init(mut self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
+        
         input
-            .for_each(|bytes| self.0.write_all(&bytes))
+            .for_each(|bytes| async move {let _ = self.0.write_all(&bytes).await; })
             .boxed_local()
     }
 }
