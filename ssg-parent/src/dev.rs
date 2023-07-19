@@ -74,7 +74,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let (builder_driver, builder_started) = BuilderDriver::new(());
     let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
-    let (stderr_driver, _) = WriteDriver::new(stderr());
+    let (stderr_driver, _) = WriteAllDriver::new(stderr());
 
     let inputs = Inputs {
         server_task,
@@ -451,22 +451,28 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteDriver<T: AsyncWrite + Unpin>(T);
+struct WriteAllDriver<T: AsyncWrite + Unpin>(T, mpsc::Sender<std::io::Result<()>>);
 
-impl<T: AsyncWrite + Unpin + 'static> Driver for WriteDriver<T> {
+impl<T: AsyncWrite + Unpin + 'static> Driver for WriteAllDriver<T> {
     type Init = T;
     type Input = LocalBoxStream<'static, Vec<u8>>;
-    type Output = ();
+    type Output = LocalBoxStream<'static, std::io::Result<()>>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
-        (Self(init), ())
+        let (sender, receiver) = mpsc::channel(1);
+        let output = fn_stream(|emitter| async {
+            loop {
+                
+            }
+        });
+        (Self(init, sender), output)
     }
 
     fn init(mut self, mut input: Self::Input) -> LocalBoxFuture<'static, ()> {
         async move {
             loop {
                 let bytes = input.next().await.expect(NEVER_ENDING_STREAM);
-                let _ = self.0.write_all(&bytes).await;
+                self.0.write_all(&bytes).await;
             }
         }
         .boxed_local()
