@@ -451,20 +451,14 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteDriver(tokio::io::std);
-
-#[derive(Debug)]
-impl StderrOutput {
-    fn new(message: impl AsRef<str>) -> StderrOutput {
-        Self(message.as_ref().to_owned())
-    }
-}
+struct WriteDriver(Box<dyn AsyncWrite + 'static>);
 
 impl Driver for WriteDriver {
+    type Init = Box<dyn AsyncWrite + 'static>;
     type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
 
-    fn new() -> (Self, Self::Output) {
+    fn new(init: Self::Init) -> (Self, Self::Output) {
         (Self(std::io::stdout()), ())
     }
 
