@@ -70,7 +70,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_started) = BuilderDriver::new(());
+    let (builder_driver, builder_started) = StaticCommandDriver::new(());
     let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
     let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
     let (eprintln_driver, _) = EprintlnDriver::new(());
@@ -353,9 +353,9 @@ fn app(inputs: Inputs) -> Outputs {
 }
 
 #[derive(Debug)]
-struct BuilderDriver(mpsc::Sender<Result<Child, std::io::Error>>);
+struct StaticCommandDriver(Command, mpsc::Sender<Result<Child, std::io::Error>>);
 
-impl BuilderDriver {
+impl StaticCommandDriver {
     fn cargo_run_builder() -> Result<Child, std::io::Error> {
         Command::new("cargo")
             .args(["run", "--package", BUILDER_CRATE_NAME])
@@ -363,7 +363,7 @@ impl BuilderDriver {
     }
 }
 
-impl Driver for BuilderDriver {
+impl Driver for StaticCommandDriver {
     type Init = ();
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
