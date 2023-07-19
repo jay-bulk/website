@@ -462,10 +462,13 @@ impl<T: AsyncWrite + Unpin + 'static> Driver for WriteDriver<T> {
         (Self(init), ())
     }
 
-    fn init(mut self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        
-        input
-            .for_each(|bytes| async move {let _ = self.0.write_all(&bytes).await; })
-            .boxed_local()
+    fn init(mut self, mut input: Self::Input) -> LocalBoxFuture<'static, ()> {
+        async move {
+            loop {
+                let bytes = input.next().await.expect(NEVER_ENDING_STREAM);
+                let _ = self.0.write_all(&bytes).await;
+            }
+        }
+        .boxed_local()
     }
 }
