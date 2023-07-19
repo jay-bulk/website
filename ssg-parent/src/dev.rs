@@ -71,9 +71,9 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     })
     .boxed();
 
-    let (builder_driver, builder_started) = BuilderDriver::new();
-    let (child_killer_driver, child_killed) = ChildKillerDriver::new();
-    let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new();
+    let (builder_driver, builder_started) = BuilderDriver::new(());
+    let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
+    let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
     let (stderr_driver, _) = WriteDriver::new();
 
     let inputs = Inputs {
@@ -368,10 +368,11 @@ impl BuilderDriver {
 }
 
 impl Driver for BuilderDriver {
+    type Init = ();
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
 
-    fn new() -> (Self, Self::Output) {
+    fn new(init : Self::Init) -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
@@ -401,10 +402,11 @@ impl Driver for BuilderDriver {
 struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl Driver for ChildKillerDriver {
+    type Init = ();
     type Input = LocalBoxStream<'static, Child>;
     type Output = LocalBoxStream<'static, Result<(), std::io::Error>>;
 
-    fn new() -> (Self, Self::Output) {
+    fn new(init : Self::Init) -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
 
         let stream = fn_stream(|emitter| async move {
@@ -435,9 +437,10 @@ impl Driver for ChildKillerDriver {
 struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
 
 impl Driver for BrowserLaunchDriver {
+    type Init = ();
     type Input = LocalBoxFuture<'static, Url>;
     type Output = LocalBoxFuture<'static, Result<(), std::io::Error>>;
-    fn new() -> (Self, Self::Output) {
+    fn new(init: Self::Init) -> (Self, Self::Output) {
         let (future, handle) = future_handles::sync::create();
         (Self(handle), future.map(Result::unwrap).boxed_local())
     }
@@ -451,10 +454,10 @@ impl Driver for BrowserLaunchDriver {
     }
 }
 
-struct WriteDriver(Box<dyn AsyncWrite + 'static>);
+struct WriteDriver<W : AsyncWrite>(W);
 
-impl Driver for WriteDriver {
-    type Init = Box<dyn AsyncWrite + 'static>;
+impl<W : AsyncWrite> Driver for WriteDriver<W> {
+    type Init = W;
     type Input = LocalBoxStream<'static, Vec<u8>>;
     type Output = ();
 
