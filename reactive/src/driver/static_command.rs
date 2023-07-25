@@ -1,5 +1,7 @@
 use async_fn_stream::fn_stream;
-use futures::{channel::mpsc, future::LocalBoxFuture, stream::LocalBoxStream};
+use futures::{
+    channel::mpsc, future::LocalBoxFuture, stream::LocalBoxStream, FutureExt, SinkExt, StreamExt,
+};
 use tokio::process::{Child, Command};
 
 use super::Driver;
@@ -14,27 +16,21 @@ impl Driver for StaticCommandDriver {
 
     fn new(command: Self::Init) -> (Self, Self::Output) {
         let (sender, mut receiver) = mpsc::channel(1);
-        let stream = fn_stream(|emitter| async move {
-            loop {
-                let input = receiver.recv().unwrap();
-                emitter.emit(input).await;
-            }
-        })
-        .boxed();
-
         let builder_driver = Self(command, sender);
-
-        (builder_driver, stream)
+        (builder_driver, receiver.boxed_local())
     }
 
     fn init(mut self, mut start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {
-        async move {
-            loop {
-                start_builder.next().await.unwrap();
-                let child = self.0.spawn();
-                self.1.send(child).await.unwrap();
-            }
-        }
-        .boxed_local()
+        self.1
+            .send_all(start_builder.map(|_| self.0.spawn()))
+            .boxed_local()
+        // async move {
+        //     loop {
+        //         start_builder.next().await.unwrap();
+        //         let child = self.0.spawn();
+        //         self.1.send(child).await.unwrap();
+        //     }
+        // }
+        // .boxed_local()
     }
 }
