@@ -1,3 +1,9 @@
+use async_fn_stream::fn_stream;
+use futures::{channel::mpsc, stream::LocalBoxStream};
+use tokio::process::{Child, Command};
+
+use super::Driver;
+
 #[derive(Debug)]
 pub struct StaticCommandDriver(Command, mpsc::Sender<Result<Child, std::io::Error>>);
 
@@ -10,7 +16,7 @@ impl Driver for StaticCommandDriver {
         let (sender, mut receiver) = mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
-                let input = receiver.recv().await.unwrap();
+                let input = receiver. .await.unwrap();
                 emitter.emit(input).await;
             }
         })
@@ -32,4 +38,3 @@ impl Driver for StaticCommandDriver {
         .boxed_local()
     }
 }
-
