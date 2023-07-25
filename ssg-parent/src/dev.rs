@@ -12,7 +12,7 @@ use futures::{
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
-use reactive::driver::{Driver, EprintlnDriver, StaticCommandDriver};
+use reactive::driver::{ChildProcessKillerDriver, Driver, EprintlnDriver, StaticCommandDriver};
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
@@ -74,8 +74,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     cargo_run_builder.args(["run", "--package", BUILDER_CRATE_NAME]);
 
     let (builder_driver, builder_started) = StaticCommandDriver::new(cargo_run_builder);
-    let (child_killer_driver, child_killed) = ChildKillerDriver::new(());
-    let (browser_launch_driver, browser_launch) = BrowserLaunchDriver::new(());
+    let (child_process_killer_driver, child_killed) = ChildProcessKillerDriver::new(());
+    let (browser_launch_driver, browser_launch) = OpenUrlDriver::new(());
     let (eprintln_driver, _) = EprintlnDriver::new(());
 
     let inputs = Inputs {
@@ -100,7 +100,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     } = outputs;
 
     let builder_driver_task = builder_driver.init(run_builder);
-    let child_killer_task = child_killer_driver.init(kill_child);
+    let child_killer_task = child_process_killer_driver.init(kill_child);
     let browser_launcher_driver_task = browser_launch_driver.init(launch_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
 
@@ -352,25 +352,5 @@ fn app(inputs: Inputs) -> Outputs {
         launch_browser,
         error,
         some_task,
-    }
-}
-
-struct BrowserLaunchDriver(CompleteHandle<Result<(), std::io::Error>>);
-
-impl Driver for BrowserLaunchDriver {
-    type Init = ();
-    type Input = LocalBoxFuture<'static, Url>;
-    type Output = LocalBoxFuture<'static, Result<(), std::io::Error>>;
-    fn new(_init: Self::Init) -> (Self, Self::Output) {
-        let (future, handle) = future_handles::sync::create();
-        (Self(handle), future.map(Result::unwrap).boxed_local())
-    }
-
-    fn init(self, url: Self::Input) -> LocalBoxFuture<'static, ()> {
-        async move {
-            self.0.complete(open::that(url.await.as_str()));
-            future::pending::<()>().await;
-        }
-        .boxed_local()
     }
 }
