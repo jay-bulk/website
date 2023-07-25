@@ -21,10 +21,8 @@ impl Driver for StaticCommandDriver {
     }
 
     fn init(mut self, mut start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {
-    let mut s = start_builder.map(|_| self.0.spawn());
-    self.1
-            .send_all(&mut s)
-            .boxed_local()
+        let mut s = start_builder.map(|_| self.0.spawn());
+        self.1.send_all(&mut s).boxed_local()
         // async move {
         //     loop {
         //         start_builder.next().await.unwrap();
