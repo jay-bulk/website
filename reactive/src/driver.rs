@@ -1,6 +1,8 @@
+mod child_process_killer;
 mod eprintln;
 mod static_command;
 
+pub use child_process_killer::ChildProcessKillerDriver;
 pub use eprintln::EprintlnDriver;
 pub use static_command::StaticCommandDriver;
 
