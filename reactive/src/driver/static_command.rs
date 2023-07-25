@@ -13,16 +13,18 @@ impl Driver for StaticCommandDriver {
     type Init = Command;
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
+    //type Fut = Result<(), mpsc::SendError>
 
     fn new(command: Self::Init) -> (Self, Self::Output) {
-        let (sender, mut receiver) = mpsc::channel(1);
+        let (sender, receiver) = mpsc::channel(1);
         let builder_driver = Self(command, sender);
-        (builder_driver, receiver.boxed_local())
+        let output = receiver.boxed_local();
+        (builder_driver, output)
     }
 
-    fn init(mut self, mut start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {
-        let mut s = start_builder.map(|_| self.0.spawn());
-        self.1.send_all(&mut s).boxed_local()
+    fn init(mut self, start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {
+        let mut s = start_builder.map(|_| Ok(self.0.spawn()));
+        self.1.send_all(&mut s).map(Result::unwrap).boxed_local()
         // async move {
         //     loop {
         //         start_builder.next().await.unwrap();
