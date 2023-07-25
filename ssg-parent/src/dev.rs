@@ -12,7 +12,7 @@ use futures::{
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
-use reactive::driver::{eprintln::EprintlnDriver, Driver};
+use reactive::driver::{EprintlnDriver, StaticCommandDriver, Driver};
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
@@ -354,7 +354,6 @@ fn app(inputs: Inputs) -> Outputs {
         some_task,
     }
 }
-
 
 struct ChildKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
