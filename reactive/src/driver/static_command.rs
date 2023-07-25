@@ -13,10 +13,10 @@ impl Driver for StaticCommandDriver {
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
 
     fn new(command: Self::Init) -> (Self, Self::Output) {
-        let (sender, mut receiver) = mpsc::channel(1);
+        let (sender, mut receiver) = tokio::mpsc::channel(1);
         let stream = fn_stream(|emitter| async move {
             loop {
-                let input = receiver. .await.unwrap();
+                let input = receiver.recv().unwrap();
                 emitter.emit(input).await;
             }
         })
