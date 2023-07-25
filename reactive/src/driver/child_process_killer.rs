@@ -1,4 +1,4 @@
-use futures::{channel::mpsc, future::LocalBoxFuture, stream::LocalBoxStream, SinkExt, StreamExt};
+use futures::{channel::mpsc, future::LocalBoxFuture, stream::LocalBoxStream, SinkExt, StreamExt, FutureExt};
 use tokio::process::Child;
 
 use super::Driver;
@@ -16,9 +16,9 @@ impl Driver for ChildProcessKillerDriver {
         (child_killer_driver, receiver.boxed_local())
     }
 
-    fn init(self, mut kill_child: Self::Input) -> LocalBoxFuture<'static, ()> {
-        let Self(sender) = self;
-        let kill_child = kill_child.map(|child| Ok(child.kill())).boxed_local();
-        sender.send_all(&mut kill_child)
+    fn init(self, kill_child: Self::Input) -> LocalBoxFuture<'static, ()> {
+        let Self(mut sender) = self;
+        let mut kill_child = kill_child.then(|mut child| async move {Ok(child.kill().await)}).boxed_local();
+        async move{sender.send_all(&mut kill_child).map(Result::unwrap).await}.boxed_local()
     }
 }
