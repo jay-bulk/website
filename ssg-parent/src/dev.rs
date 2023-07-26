@@ -82,7 +82,6 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let inputs = Inputs {
         server_task,
-        port,
         child_killed,
         builder_crate_fs_change,
         builder_started,
@@ -133,11 +132,11 @@ enum OutputEvent {
     RunBuilder,
     KillChild(Child),
     Error(DevError),
+    OpenBrowser,
 }
 
 struct Inputs {
     server_task: LocalBoxFuture<'static, std::io::Error>,
-    port: Port,
     child_killed: LocalBoxStream<'static, Result<(), std::io::Error>>,
     builder_crate_fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
@@ -184,7 +183,6 @@ impl BuilderState {
 fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
-        port,
         child_killed,
         builder_crate_fs_change,
         builder_started,
@@ -197,7 +195,11 @@ fn app(inputs: Inputs) -> Outputs {
         .blue()
         .to_string();
 
-    let initial = stream::iter(vec![OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
+    let mut initial = vec![OutputEvent::RunBuilder, OutputEvent::Stderr(message)];
+    if launch_browser {
+        initial.push(OutputEvent::OpenBrowser);
+    }
+    let initial = stream::iter(initial);
 
     let reaction = stream::select_all([
         stream::once(server_task)
@@ -273,6 +275,7 @@ fn app(inputs: Inputs) -> Outputs {
     let (run_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
     let (error_sender, mut error_receiver) = mpsc::channel(1);
     let (stderr_sender, mut stderr_receiver) = mpsc::channel(1);
+    let (open_browser_sender, mut open_browser_receiver) = mpsc::channel(1);
 
     let kill_child = fn_stream(|emitter| async move {
         loop {
@@ -285,6 +288,17 @@ fn app(inputs: Inputs) -> Outputs {
     let run_builder = fn_stream(|emitter| async move {
         loop {
             start_builder_receiver
+                .recv()
+                .await
+                .expect(NEVER_ENDING_STREAM);
+            emitter.emit(()).await;
+        }
+    })
+    .boxed_local();
+
+    let open_browser = fn_stream(|emitter| async move {
+        loop {
+            open_browser_receiver
                 .recv()
                 .await
                 .expect(NEVER_ENDING_STREAM);
@@ -342,9 +356,15 @@ fn app(inputs: Inputs) -> Outputs {
                 }
                 .boxed_local()
             }
+            OutputEvent::OpenBrowser => {
+                let sender_clone = open_browser_sender.clone();
+                async move {
+                    sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
+                }
+                .boxed_local()
+            }
         })
         .boxed_local();
-
 
     Outputs {
         stderr,
