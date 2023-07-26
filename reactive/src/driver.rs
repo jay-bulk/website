@@ -1,11 +1,12 @@
 mod child_process_killer;
 mod eprintln;
 mod open_that;
-mod static_command;
+mod command;
 
 pub use child_process_killer::ChildProcessKillerDriver;
 pub use eprintln::EprintlnDriver;
-pub use static_command::StaticCommandDriver;
+pub use open_that::StaticOpenThatDriver;
+pub use command::StaticCommandDriver;
 
 use futures::future::LocalBoxFuture;
 

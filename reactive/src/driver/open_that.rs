@@ -8,9 +8,9 @@ use futures::{
 
 use super::Driver;
 
-struct OpenThatDriver(Sender<std::io::Result<()>>);
+pub struct StaticOpenThatDriver(Sender<std::io::Result<()>>);
 
-impl Driver for OpenThatDriver {
+impl Driver for StaticOpenThatDriver {
     type Init = ();
     type Input = LocalBoxStream<'static, Box<dyn AsRef<OsStr>>>;
     type Output = LocalBoxStream<'static, std::io::Result<()>>;

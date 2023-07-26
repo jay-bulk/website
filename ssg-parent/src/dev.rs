@@ -11,7 +11,9 @@ use futures::{
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
-use reactive::driver::{ChildProcessKillerDriver, Driver, EprintlnDriver, StaticCommandDriver};
+use reactive::driver::{
+    ChildProcessKillerDriver, Driver, EprintlnDriver, StaticOpenThatDriver, StaticCommandDriver,
+};
 use thiserror::Error;
 use tokio::{
     process::{Child, Command},
@@ -74,7 +76,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let (builder_driver, builder_started) = StaticCommandDriver::new(cargo_run_builder);
     let (child_process_killer_driver, child_killed) = ChildProcessKillerDriver::new(());
-    let (browser_launch_driver, browser_launch) = OpenUrlDriver::new(());
+    let (open_that_driver, browser_launch) = StaticOpenThatDriver::new(());
     let (eprintln_driver, _) = EprintlnDriver::new(());
 
     let inputs = Inputs {
@@ -84,7 +86,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         builder_crate_fs_change,
         builder_started,
         launch_browser,
-        browser_launch,
+        open_that_driver: browser_launch,
     };
 
     let outputs = app(inputs);
@@ -100,7 +102,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_process_killer_driver.init(kill_child);
-    let browser_launcher_driver_task = browser_launch_driver.init(launch_browser);
+    let browser_launcher_driver_task = open_that_driver.init(launch_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
 
     let app_error = select! {
@@ -138,7 +140,7 @@ struct Inputs {
     builder_crate_fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
-    browser_launch: LocalBoxFuture<'static, Result<(), std::io::Error>>,
+    open_that_driver: LocalBoxFuture<'static, Result<(), std::io::Error>>,
 }
 
 struct Outputs {
@@ -184,7 +186,7 @@ fn app(inputs: Inputs) -> Outputs {
         builder_crate_fs_change,
         builder_started,
         launch_browser,
-        browser_launch,
+        open_that_driver: browser_launch,
     } = inputs;
 
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
