@@ -3119,6 +3119,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "open"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfabf1927dce4d6fdf563d63328a0a506101ced3ec780ca2135747336c98cef8"
+dependencies = [
+ "is-wsl",
+ "libc",
+ "pathdiff",
+]
+
+[[package]]
 name = "option-ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3559,6 +3570,7 @@ version = "0.1.0"
 dependencies = [
  "async-fn-stream",
  "futures",
+ "open 5.0.0",
  "tokio",
 ]
 
@@ -4206,7 +4218,7 @@ dependencies = [
  "live-server",
  "notify 6.0.1",
  "once_cell",
- "open",
+ "open 4.1.0",
  "portpicker",
  "reactive",
  "reqwest",
