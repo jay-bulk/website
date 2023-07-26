@@ -1,5 +1,26 @@
+use std::ffi::OsStr;
 
+use futures::{channel::mpsc::Sender, stream::LocalBoxStream};
 
+use super::Driver;
+
+struct OpenThatDriver(Sender<Box<dyn AsRef<OsStr>>>);
+
+impl Driver for OpenThatDriver {
+    type Init = ();
+
+    type Input = LocalBoxStream;
+
+    type Output;
+
+    fn new(init: Self::Init) -> (Self, Self::Output) {
+        todo!()
+    }
+
+    fn init(self, input: Self::Input) -> futures::future::LocalBoxFuture<'static, ()> {
+        todo!()
+    }
+}
 
 // struct OpenUrlDriver(CompleteHandle<Result<(), std::io::Error>>);
 
@@ -20,4 +41,3 @@
 //         .boxed_local()
 //     }
 // }
-

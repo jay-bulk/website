@@ -1,6 +1,6 @@
 mod child_process_killer;
 mod eprintln;
-mod open_url;
+mod open_that;
 mod static_command;
 
 pub use child_process_killer::ChildProcessKillerDriver;
