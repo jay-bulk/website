@@ -141,7 +141,8 @@ struct Inputs {
     builder_crate_fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
-    open_that_driver: LocalBoxFuture<'static, Result<(), std::io::Error>>,
+    open_that_driver: LocalBoxStream<'static, Result<(), std::io::Error>>,
+    local_host_port_url: String
 }
 
 struct Outputs {
@@ -188,9 +189,10 @@ fn app(inputs: Inputs) -> Outputs {
         builder_started,
         launch_browser,
         open_that_driver: browser_launch,
+        local_host_port_url
     } = inputs;
 
-    let message = format!("\nServer started at {url}\n").blue().to_string();
+    let message = format!("\nServer started at {local_host_port_url}\n").blue().to_string();
 
     let initial = stream::iter([OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
 
@@ -340,11 +342,9 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let launch_browser = if launch_browser {
-        future::ready(url).boxed_local()
-    } else {
+    let launch_browser = 
         future::pending().boxed_local()
-    };
+    ;
 
     Outputs {
         stderr,
