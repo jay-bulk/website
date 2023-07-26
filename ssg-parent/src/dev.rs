@@ -112,7 +112,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
         _ = stderr_driver_task.fuse() => unreachable!(),
-        _ = browser_launcher_driver_task.fuse() => unreachable!(),
+        _ = open_url_driver_task.fuse() => unreachable!(),
         _ = some_task.fuse() => unreachable!(),
     };
 
@@ -197,7 +197,7 @@ fn app(inputs: Inputs) -> Outputs {
         .blue()
         .to_string();
 
-    let initial = stream::iter([OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
+    let initial = stream::iter(vec![OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
 
     let reaction = stream::select_all([
         stream::once(server_task)
@@ -345,13 +345,12 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let launch_browser = future::pending().boxed_local();
 
     Outputs {
         stderr,
         kill_child,
         run_builder,
-        open_browser: launch_browser,
+        open_browser,
         error,
         some_task,
     }
