@@ -1,6 +1,10 @@
 use std::ffi::OsStr;
 
-use futures::{channel::mpsc::Sender, stream::LocalBoxStream};
+use futures::{
+    channel::mpsc::{self, Sender},
+    stream::LocalBoxStream,
+    StreamExt,
+};
 
 use super::Driver;
 
@@ -8,13 +12,12 @@ struct OpenThatDriver(Sender<Box<dyn AsRef<OsStr>>>);
 
 impl Driver for OpenThatDriver {
     type Init = ();
-
-    type Input = LocalBoxStream;
-
-    type Output;
+    type Input = LocalBoxStream<'static, Box<dyn AsRef<OsStr>>>;
+    type Output = LocalBoxStream<'static, ()>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
-        todo!()
+        let (sender, receiver) = mpsc::channel(1);
+        (Self(sender), receiver.map(|_| ()).boxed_local())
     }
 
     fn init(self, input: Self::Input) -> futures::future::LocalBoxFuture<'static, ()> {
