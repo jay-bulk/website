@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
 use colored::Colorize;
-use future_handles::sync::CompleteHandle;
 use futures::{
     future::{self, LocalBoxFuture},
     select,
