@@ -8,12 +8,12 @@ use futures::{
 
 use super::Driver;
 
-pub struct StaticOpenThatDriver<O: AsRef<OsStr>> {
+pub struct StaticOpenThatDriver<O: AsRef<OsStr> + 'static> {
     os_str: O,
     sender: Sender<std::io::Result<()>>,
 }
 
-impl<O: AsRef<OsStr>> Driver for StaticOpenThatDriver<O> {
+impl<O: AsRef<OsStr> + 'static> Driver for StaticOpenThatDriver<O> {
     type Init = O;
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, std::io::Result<()>>;
@@ -30,10 +30,7 @@ impl<O: AsRef<OsStr>> Driver for StaticOpenThatDriver<O> {
     }
 
     fn init(self, input: Self::Input) -> futures::future::LocalBoxFuture<'static, ()> {
-        let Self {
-            ref os_str,
-            mut sender,
-        } = self;
+        let Self { os_str, mut sender } = self;
         let mut opened = input
             .then(move |_| futures::future::ready(Ok(open::that(os_str.as_ref()))))
             .boxed_local();

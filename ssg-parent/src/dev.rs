@@ -12,7 +12,7 @@ use futures::{
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use portpicker::Port;
 use reactive::driver::{
-    ChildProcessKillerDriver, Driver, EprintlnDriver, StaticOpenThatDriver, StaticCommandDriver,
+    ChildProcessKillerDriver, Driver, EprintlnDriver, StaticCommandDriver, StaticOpenThatDriver,
 };
 use thiserror::Error;
 use tokio::{
@@ -76,7 +76,8 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let (builder_driver, builder_started) = StaticCommandDriver::new(cargo_run_builder);
     let (child_process_killer_driver, child_killed) = ChildProcessKillerDriver::new(());
-    let (open_that_driver, browser_launch) = StaticOpenThatDriver::new(());
+    let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+    let (open_that_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = EprintlnDriver::new(());
 
     let inputs = Inputs {
@@ -189,7 +190,6 @@ fn app(inputs: Inputs) -> Outputs {
         open_that_driver: browser_launch,
     } = inputs;
 
-    let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
     let message = format!("\nServer started at {url}\n").blue().to_string();
 
     let initial = stream::iter([OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
