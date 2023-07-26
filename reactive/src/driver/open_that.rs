@@ -8,16 +8,16 @@ use futures::{
 
 use super::Driver;
 
-struct OpenThatDriver(Sender<Box<dyn AsRef<OsStr>>>);
+struct OpenThatDriver(Sender<std::io::Result<()>>);
 
 impl Driver for OpenThatDriver {
     type Init = ();
     type Input = LocalBoxStream<'static, Box<dyn AsRef<OsStr>>>;
-    type Output = LocalBoxStream<'static, ()>;
+    type Output = LocalBoxStream<'static, std::io::Result<()>>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel(1);
-        (Self(sender), receiver.map(|_| ()).boxed_local())
+        (Self(sender), receiver.boxed_local())
     }
 
     fn init(self, input: Self::Input) -> futures::future::LocalBoxFuture<'static, ()> {
