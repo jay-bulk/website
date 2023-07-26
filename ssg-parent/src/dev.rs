@@ -77,7 +77,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let (builder_driver, builder_started) = StaticCommandDriver::new(cargo_run_builder);
     let (child_process_killer_driver, child_killed) = ChildProcessKillerDriver::new(());
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
-    let (open_that_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
+    let (open_url_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = EprintlnDriver::new(());
 
     let inputs = Inputs {
@@ -88,13 +88,14 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         builder_started,
         launch_browser,
         open_that_driver: browser_launch,
+        local_host_port_url: url,
     };
 
     let outputs = app(inputs);
 
     let Outputs {
         stderr,
-        launch_browser,
+        open_browser: launch_browser,
         error: app_error,
         kill_child,
         run_builder,
@@ -103,7 +104,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
 
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_process_killer_driver.init(kill_child);
-    let browser_launcher_driver_task = open_that_driver.init(launch_browser);
+    let open_url_driver_task = open_url_driver.init(launch_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
 
     let app_error = select! {
@@ -142,14 +143,14 @@ struct Inputs {
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     open_that_driver: LocalBoxStream<'static, Result<(), std::io::Error>>,
-    local_host_port_url: String
+    local_host_port_url: Url,
 }
 
 struct Outputs {
     stderr: LocalBoxStream<'static, String>,
     kill_child: LocalBoxStream<'static, Child>,
     run_builder: LocalBoxStream<'static, ()>,
-    launch_browser: LocalBoxFuture<'static, Url>,
+    open_browser: LocalBoxStream<'static, ()>,
     error: LocalBoxFuture<'static, DevError>,
     some_task: LocalBoxFuture<'static, ()>,
 }
@@ -189,10 +190,12 @@ fn app(inputs: Inputs) -> Outputs {
         builder_started,
         launch_browser,
         open_that_driver: browser_launch,
-        local_host_port_url
+        local_host_port_url,
     } = inputs;
 
-    let message = format!("\nServer started at {local_host_port_url}\n").blue().to_string();
+    let message = format!("\nServer started at {local_host_port_url}\n")
+        .blue()
+        .to_string();
 
     let initial = stream::iter([OutputEvent::RunBuilder, OutputEvent::Stderr(message)]);
 
@@ -207,7 +210,7 @@ fn app(inputs: Inputs) -> Outputs {
         builder_started
             .map(InputEvent::BuilderStarted)
             .boxed_local(),
-        stream::once(browser_launch)
+        browser_launch
             .map(InputEvent::BrowserLaunched)
             .boxed_local(),
     ])
@@ -342,15 +345,13 @@ fn app(inputs: Inputs) -> Outputs {
         })
         .boxed_local();
 
-    let launch_browser = 
-        future::pending().boxed_local()
-    ;
+    let launch_browser = future::pending().boxed_local();
 
     Outputs {
         stderr,
         kill_child,
         run_builder,
-        launch_browser,
+        open_browser: launch_browser,
         error,
         some_task,
     }
