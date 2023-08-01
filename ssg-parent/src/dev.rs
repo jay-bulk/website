@@ -31,7 +31,7 @@ const LOCALHOST: &str = "localhost";
 
 struct FsChangeDriver(futures::channel::mpsc::Sender<notify::Result<notify::Event>>);
 
-impl Driver for FsChangeDriver {
+impl<T> Driver for FsChangeDriver where std::path::PathBuf : From<T> {
     type Init = ();
     type Input = ();
     type Output = LocalBoxStream<'static, notify::Result<()>>;
