@@ -47,11 +47,29 @@ impl Driver for FsChangeDriver {
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
-        })?;
+        let sender = self.0.clone();
 
-        watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
+        let watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
+            block_on(sender.feed(result.map(|_| ())))
+                .expect("this closure gets sent to a blocking context");
+        });
+
+        let watcher = match watcher {
+            Ok(watcher) => watcher,
+            Err(error) => {
+                block_on(self.0.feed(Err(error))).unwrap();
+                return futures::future::pending().boxed_local();
+            }
+        };
+
+        if let Err(error) =
+            watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)
+        {
+            block_on(self.0.feed(Err(error))).unwrap();
+            return futures::future::pending().boxed_local();
+        };
+
+        futures::future::pending().boxed_local()
     }
 }
 
