@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, path::PathBuf};
 
 use colored::Colorize;
 use futures::{
@@ -31,9 +31,15 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver<Path>(futures::channel::mpsc::Sender<notify::Result<notify::Event>>, Path);
+struct FsChangeDriver<Path>(
+    futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
+    Path,
+);
 
-impl<T : 'static> Driver for FsChangeDriver<T> where std::path::PathBuf : From<T> {
+impl<T: 'static> Driver for FsChangeDriver<T>
+where
+    std::path::PathBuf: From<T>,
+{
     type Init = T;
     type Input = ();
     type Output = LocalBoxStream<'static, notify::Result<()>>;
@@ -57,7 +63,8 @@ impl<T : 'static> Driver for FsChangeDriver<T> where std::path::PathBuf : From<T
         let mut sender = self.0.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            futures::executor::block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
+            futures::executor::block_on(sender.feed(result))
+                .expect("this closure gets sent to a blocking context");
         });
 
         let mut watcher = match watcher {
