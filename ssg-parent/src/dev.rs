@@ -31,11 +31,12 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver<T>(
+struct FsChangeDriver<T> (
     futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
     std::path::PathBuf,
-    std::marker::PhantomData<T>,
-);
+    std::marker::PhantomData<fn(T)->std::path::PathBuf>,
+)
+;
 
 impl<T> Driver for FsChangeDriver<T>
 where
@@ -105,7 +106,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
     let (open_url_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = EprintlnDriver::new(());
-    let (fs_change_driver, fs_change) = FsChangeDriver::new(());
+    let (fs_change_driver, fs_change) = FsChangeDriver::new(BUILDER_CRATE_NAME);
 
     let inputs = Inputs {
         server_task,
