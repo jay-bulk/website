@@ -28,23 +28,22 @@ pub enum DevError {
     NoFreePort,
 }
 
+
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver<Path>(
+struct FsChangeDriver(
     futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
-    Path,
+    std::path::PathBuf,
 );
 
-impl<T: 'static> Driver for FsChangeDriver<T>
-where
-    std::path::PathBuf: From<T>,
+impl Driver for FsChangeDriver
 {
-    type Init = T;
+    type Init<T> = T where std::path::PathBuf: From<T>;
     type Input = ();
     type Output = LocalBoxStream<'static, notify::Result<()>>;
 
-    fn new(_init: Self::Init) -> (Self, Self::Output) {
+    fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<Event>>(1);
 
         let receiver = receiver
@@ -56,7 +55,7 @@ where
             })
             .boxed_local();
 
-        (Self(sender), receiver)
+        (Self(sender, init), receiver)
     }
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
