@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use colored::Colorize;
 use futures::{
     future::{self, LocalBoxFuture},
@@ -29,10 +31,10 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver(futures::channel::mpsc::Sender<notify::Result<notify::Event>>);
+struct FsChangeDriver<Path>(futures::channel::mpsc::Sender<notify::Result<notify::Event>>, Path);
 
-impl<T> Driver for FsChangeDriver where std::path::PathBuf : From<T> {
-    type Init = ();
+impl<T : 'static> Driver for FsChangeDriver<T> where std::path::PathBuf : From<T> {
+    type Init = T;
     type Input = ();
     type Output = LocalBoxStream<'static, notify::Result<()>>;
 
