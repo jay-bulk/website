@@ -7,7 +7,7 @@ use futures::{
     future::{self, LocalBoxFuture},
     select,
     stream::{self, LocalBoxStream},
-    FutureExt, StreamExt, TryStreamExt,
+    FutureExt, StreamExt, TryStreamExt, SinkExt, executor::block_on
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use reactive::driver::{
@@ -46,8 +46,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            sender
-                .blocking_send(result)
+            block_on( sender.feed(result) )
                 .expect("this closure gets sent to a blocking context");
         })?;
 
