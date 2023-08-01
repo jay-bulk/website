@@ -42,12 +42,16 @@ impl Driver for FsChangeDriver {
     type Output = LocalBoxStream<'static, notify::Result<()>>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
-        let (sender, receiver) = futures::channel::mpsc::channel::<nofity::Result<()>>(1);
-        (Self, )
+        let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<()>>(1);
+        (Self(sender), receiver.boxed_local())
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        todo!()
+        let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
+            block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
+        })?;
+
+        watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
     }
 }
 
