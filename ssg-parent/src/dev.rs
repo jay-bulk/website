@@ -10,15 +10,11 @@ use futures::{
     FutureExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
-use portpicker::Port;
 use reactive::driver::{
     ChildProcessKillerDriver, Driver, EprintlnDriver, StaticCommandDriver, StaticOpenThatDriver,
 };
 use thiserror::Error;
-use tokio::{
-    process::{Child, Command},
-    sync::mpsc,
-};
+use tokio::process::{Child, Command};
 use url::Url;
 
 const NEVER_ENDING_STREAM: &str = "never ending stream";
@@ -47,7 +43,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         .boxed();
 
     let builder_crate_fs_change = try_fn_stream(|emitter| async move {
-        let (sender, mut receiver) = mpsc::channel(1);
+        let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
             sender
