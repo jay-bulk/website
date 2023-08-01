@@ -247,18 +247,26 @@ fn app(inputs: Inputs) -> Outputs {
                 Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
             },
             InputEvent::BuilderCrateFsChange(result) => match result {
-                Ok(event) => match &mut state.builder {
-                    if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => Some(()),
-                    BuilderState::Starting => {
-                        state.builder = BuilderState::Obsolete;
-                        None
+                Ok(event) => {
+                    match event.kind {
+                        notify::EventKind::Create(_)
+                                        | notify::EventKind::Modify(_)
+                                        | notify::EventKind::Remove(_) => {
+                            match &mut state.builder {
+                                BuilderState::Starting => {
+                                    state.builder = BuilderState::Obsolete;
+                                    None
+                                }
+                                BuilderState::Started(_) => {
+                                    let child = state.builder.killing().unwrap();
+                                    Some(OutputEvent::KillChild(child))
+                                }
+                                BuilderState::None | BuilderState::Obsolete => None,
+                            }
+                        }
+                        _ => None,
                     }
-                    BuilderState::Started(_) => {
-                        let child = state.builder.killing().unwrap();
-                        Some(OutputEvent::KillChild(child))
-                    }
-                    BuilderState::None | BuilderState::Obsolete => None,
-                },
+                }
                 Err(error) => Some(OutputEvent::Error(DevError::FsWatch(error))),
             },
             InputEvent::BuilderStarted(child) => match child {
