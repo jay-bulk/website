@@ -42,19 +42,27 @@ impl Driver for FsChangeDriver {
     type Output = LocalBoxStream<'static, notify::Result<()>>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
-        let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<()>>(1);
-        (Self(sender), receiver.boxed_local())
+        let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<Event>>(1);
+        let receiver_filtered = receiver
+.try_filter_map(|event| async move {
+        if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
+            Ok(Some(()))
+        } else {
+            Ok(None)
+        }
+    }).boxed_local();
+        (Self(sender), receiver_filtered)
     }
 
-    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
+    fn init(mut self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let sender = self.0.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            block_on(sender.feed(result.map(|_| ())))
+            block_on(sender.feed(result))
                 .expect("this closure gets sent to a blocking context");
         });
 
-        let watcher = match watcher {
+        let mut watcher = match watcher {
             Ok(watcher) => watcher,
             Err(error) => {
                 block_on(self.0.feed(Err(error))).unwrap();
@@ -82,28 +90,28 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         .map(|result| result.expect_err("unreachable"))
         .boxed();
 
-    let builder_crate_fs_change = try_fn_stream(|emitter| async move {
-        let (sender, mut receiver) = futures::channel::mpsc::channel(1);
+    // let builder_crate_fs_change = try_fn_stream(|emitter| async move {
+    //     let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
-        })?;
+    //     let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
+    //         block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
+    //     })?;
 
-        watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
+    //     watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
 
-        loop {
-            let event = receiver.recv().await.unwrap()?;
-            emitter.emit(event).await;
-        }
-    })
-    .try_filter_map(|event| async move {
-        if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
-            Ok(Some(()))
-        } else {
-            Ok(None)
-        }
-    })
-    .boxed();
+    //     loop {
+    //         let event = receiver.recv().await.unwrap()?;
+    //         emitter.emit(event).await;
+    //     }
+    // })
+    // .try_filter_map(|event| async move {
+    //     if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
+    //         Ok(Some(()))
+    //     } else {
+    //         Ok(None)
+    //     }
+    // })
+    // .boxed();
 
     let mut cargo_run_builder = Command::new("cargo");
     cargo_run_builder.args(["run", "--package", BUILDER_CRATE_NAME]);
