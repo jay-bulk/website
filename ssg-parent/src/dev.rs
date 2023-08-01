@@ -34,32 +34,33 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver(futures::channel::mpsc::Sender<notify::Result<()>>);
+struct FsChangeDriver(futures::channel::mpsc::Sender<notify::Result<notify::Event>>);
 
 impl Driver for FsChangeDriver {
     type Init = ();
     type Input = ();
-    type Output = LocalBoxStream<'static, notify::Result<()>>;
+    type Output = LocalBoxStream<'static, notify::Result<notify::Event>>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<Event>>(1);
-        let receiver_filtered = receiver
-.try_filter_map(|event| async move {
-        if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) = event.kind {
-            Ok(Some(()))
-        } else {
-            Ok(None)
-        }
-    }).boxed_local();
-        (Self(sender), receiver_filtered)
+
+        let receiver = receiver
+            .try_filter_map(|event| async move {
+                Ok(match event.kind {
+                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => Some(()),
+                    _ => None,
+                })
+            })
+            .boxed_local();
+
+        (Self(sender), receiver)
     }
 
     fn init(mut self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let sender = self.0.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            block_on(sender.feed(result))
-                .expect("this closure gets sent to a blocking context");
+            block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
         });
 
         let mut watcher = match watcher {
