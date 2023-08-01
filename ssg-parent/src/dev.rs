@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use async_fn_stream::{fn_stream, try_fn_stream};
+use async_fn_stream::fn_stream;
 use camino::Utf8Path;
 use colored::Colorize;
 use futures::{
@@ -122,7 +122,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
     let (open_url_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = EprintlnDriver::new(());
-    let (fs_change_driver , fs_change) = FsChangeDriver::new(());
+    let (fs_change_driver, fs_change) = FsChangeDriver::new(());
 
     let inputs = Inputs {
         server_task,
@@ -317,11 +317,11 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    let (kill_child_sender, mut kill_child_receiver) = mpsc::channel(1);
-    let (run_builder_sender, mut start_builder_receiver) = mpsc::channel(1);
-    let (error_sender, mut error_receiver) = mpsc::channel(1);
-    let (stderr_sender, mut stderr_receiver) = mpsc::channel(1);
-    let (open_browser_sender, mut open_browser_receiver) = mpsc::channel(1);
+    let (kill_child_sender, mut kill_child_receiver) = futures::channel::mpsc::channel(1);
+    let (run_builder_sender, mut start_builder_receiver) = futures::channel::mpsc::channel(1);
+    let (error_sender, mut error_receiver) = futures::channel::mpsc::channel(1);
+    let (stderr_sender, mut stderr_receiver) = futures::channel::mpsc::channel(1);
+    let (open_browser_sender, mut open_browser_receiver) = futures::channel::mpsc::channel(1);
 
     let kill_child = fn_stream(|emitter| async move {
         loop {
