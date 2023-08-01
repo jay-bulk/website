@@ -1,13 +1,11 @@
-use std::marker::PhantomData;
-
 use colored::Colorize;
 use futures::{
     future::{self, LocalBoxFuture},
     select,
     stream::{self, LocalBoxStream},
-    FutureExt, SinkExt, StreamExt, TryStreamExt,
+    FutureExt, SinkExt, StreamExt,
 };
-use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
+use notify::{recommended_watcher, Event, RecursiveMode, Watcher};
 use reactive::driver::{
     ChildProcessKillerDriver, Driver, EprintlnDriver, StaticCommandDriver, StaticOpenThatDriver,
 };
@@ -31,12 +29,11 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver<T> (
-    futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
-    std::path::PathBuf,
-    std::marker::PhantomData<fn(T)->std::path::PathBuf>,
-)
-;
+struct FsChangeDriver<T> {
+    sender: futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
+    path: std::path::PathBuf,
+    boo: std::marker::PhantomData<fn(T) -> std::path::PathBuf>,
+}
 
 impl<T> Driver for FsChangeDriver<T>
 where
@@ -44,28 +41,22 @@ where
 {
     type Init = T;
     type Input = ();
-    type Output = LocalBoxStream<'static, notify::Result<()>>;
+    type Output = LocalBoxStream<'static, notify::Result<notify::Event>>;
 
-    fn new(init: Self::Init) -> (Self, Self::Output) {
+    fn new(path: Self::Init) -> (Self, Self::Output) {
         let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<Event>>(1);
 
-        let receiver = receiver
-            .try_filter_map(|event| async move {
-                Ok(match event.kind {
-                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => Some(()),
-                    _ => None,
-                })
-            })
-            .boxed_local();
+        let fs_change_driver = Self {
+            sender,
+            path: path.into(),
+            boo: std::marker::PhantomData,
+        };
 
-        (
-            Self(sender, init.into(), std::marker::PhantomData),
-            receiver,
-        )
+        (fs_change_driver, receiver.boxed_local())
     }
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        let mut sender = self.0.clone();
+        let mut sender = self.sender.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
             futures::executor::block_on(sender.feed(result))
@@ -75,13 +66,13 @@ where
         let mut watcher = match watcher {
             Ok(watcher) => watcher,
             Err(error) => {
-                futures::executor::block_on(self.0.feed(Err(error))).unwrap();
+                futures::executor::block_on(self.sender.feed(Err(error))).unwrap();
                 return futures::future::pending().boxed_local();
             }
         };
 
-        if let Err(error) = watcher.watch(&self.1, RecursiveMode::Recursive) {
-            futures::executor::block_on(self.0.feed(Err(error))).unwrap();
+        if let Err(error) = watcher.watch(&self.path, RecursiveMode::Recursive) {
+            futures::executor::block_on(self.sender.feed(Err(error))).unwrap();
             return futures::future::pending().boxed_local();
         };
 
@@ -150,7 +141,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
 
 enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
-    BuilderCrateFsChange(Result<(), notify::Error>),
+    BuilderCrateFsChange(notify::Result<notify::Event>),
     BuilderStarted(Result<Child, std::io::Error>),
     BrowserLaunched(Result<(), std::io::Error>),
     ServerError(std::io::Error),
@@ -168,7 +159,7 @@ enum OutputEvent {
 struct Inputs {
     server_task: LocalBoxFuture<'static, std::io::Error>,
     child_killed: LocalBoxStream<'static, Result<(), std::io::Error>>,
-    fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
+    fs_change: LocalBoxStream<'static, notify::Result<notify::Event>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     open_that_driver: LocalBoxStream<'static, Result<(), std::io::Error>>,
@@ -256,7 +247,8 @@ fn app(inputs: Inputs) -> Outputs {
                 Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
             },
             InputEvent::BuilderCrateFsChange(result) => match result {
-                Ok(_) => match &mut state.builder {
+                Ok(event) => match &mut state.builder {
+                    if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => Some(()),
                     BuilderState::Starting => {
                         state.builder = BuilderState::Obsolete;
                         None
