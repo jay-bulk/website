@@ -39,7 +39,7 @@ struct FsChangeDriver(futures::channel::mpsc::Sender<notify::Result<notify::Even
 impl Driver for FsChangeDriver {
     type Init = ();
     type Input = ();
-    type Output = LocalBoxStream<'static, notify::Result<notify::Event>>;
+    type Output = LocalBoxStream<'static, notify::Result<()>>;
 
     fn new(init: Self::Init) -> (Self, Self::Output) {
         let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<Event>>(1);
@@ -122,11 +122,12 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
     let (open_url_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = EprintlnDriver::new(());
+    let (fs_change_driver , fs_change) = FsChangeDriver::new(());
 
     let inputs = Inputs {
         server_task,
         child_killed,
-        builder_crate_fs_change,
+        fs_change,
         builder_started,
         launch_browser,
         open_that_driver: browser_launch,
@@ -148,6 +149,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
     let child_killer_task = child_process_killer_driver.init(kill_child);
     let open_url_driver_task = open_url_driver.init(launch_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
+    let fs_change_driver_task = fs_change_driver.init(());
 
     let app_error = select! {
         error = app_error.fuse() => error,
@@ -156,6 +158,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         _ = stderr_driver_task.fuse() => unreachable!(),
         _ = open_url_driver_task.fuse() => unreachable!(),
         _ = some_task.fuse() => unreachable!(),
+        _ = fs_change_driver_task.fuse() => unreachable!(),
     };
 
     app_error
@@ -181,7 +184,7 @@ enum OutputEvent {
 struct Inputs {
     server_task: LocalBoxFuture<'static, std::io::Error>,
     child_killed: LocalBoxStream<'static, Result<(), std::io::Error>>,
-    builder_crate_fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
+    fs_change: LocalBoxStream<'static, Result<(), notify::Error>>,
     builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
     launch_browser: bool,
     open_that_driver: LocalBoxStream<'static, Result<(), std::io::Error>>,
@@ -227,7 +230,7 @@ fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
         child_killed,
-        builder_crate_fs_change,
+        fs_change: builder_crate_fs_change,
         builder_started,
         launch_browser,
         open_that_driver: browser_launch,
