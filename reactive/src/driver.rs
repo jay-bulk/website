@@ -1,20 +1,16 @@
-mod child_process_killer;
-mod command;
-mod eprintln;
-mod open_that;
-
-pub use child_process_killer::ChildProcessKillerDriver;
-pub use command::StaticCommandDriver;
-pub use eprintln::EprintlnDriver;
-pub use open_that::StaticOpenThatDriver;
+pub mod child_process_killer;
+pub mod command;
+pub mod eprintln;
+pub mod open_that;
+pub mod fs_change;
 
 use futures::future::LocalBoxFuture;
 
 pub trait Driver: Sized {
-    type Init;
+    type Args;
     type Input;
     type Output;
 
-    fn new(init: Self::Init) -> (Self, Self::Output);
+    fn new(init: Self::Args) -> (Self, Self::Output);
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()>;
 }

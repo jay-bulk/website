@@ -5,11 +5,11 @@ use super::Driver;
 pub struct EprintlnDriver;
 
 impl Driver for EprintlnDriver {
-    type Init = ();
+    type Args = ();
     type Input = LocalBoxStream<'static, String>;
     type Output = ();
 
-    fn new(_init: Self::Init) -> (Self, Self::Output) {
+    fn new(_init: Self::Args) -> (Self, Self::Output) {
         (Self, ())
     }
 

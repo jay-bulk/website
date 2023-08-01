@@ -8,11 +8,11 @@ use super::Driver;
 pub struct ChildProcessKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl Driver for ChildProcessKillerDriver {
-    type Init = ();
+    type Args = ();
     type Input = LocalBoxStream<'static, Child>;
     type Output = LocalBoxStream<'static, Result<(), std::io::Error>>;
 
-    fn new(_init: Self::Init) -> (Self, Self::Output) {
+    fn new(_init: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel(1);
         let child_killer_driver = Self(sender);
         (child_killer_driver, receiver.boxed_local())

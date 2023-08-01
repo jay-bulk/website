@@ -14,11 +14,11 @@ pub struct StaticOpenThatDriver<O: AsRef<OsStr> + 'static> {
 }
 
 impl<O: AsRef<OsStr> + 'static> Driver for StaticOpenThatDriver<O> {
-    type Init = O;
+    type Args = O;
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, std::io::Result<()>>;
 
-    fn new(init: Self::Init) -> (Self, Self::Output) {
+    fn new(init: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel(1);
         (
             Self {

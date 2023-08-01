@@ -9,11 +9,11 @@ use super::Driver;
 pub struct StaticCommandDriver(Command, mpsc::Sender<Result<Child, std::io::Error>>);
 
 impl Driver for StaticCommandDriver {
-    type Init = Command;
+    type Args = Command;
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
 
-    fn new(command: Self::Init) -> (Self, Self::Output) {
+    fn new(command: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel(1);
         let builder_driver = Self(command, sender);
         let output = receiver.boxed_local();

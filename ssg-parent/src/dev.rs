@@ -1,25 +1,14 @@
 use colored::Colorize;
-use futures::{
-    future::{self, LocalBoxFuture},
-    select,
-    stream::{self, LocalBoxStream},
-    FutureExt, SinkExt, StreamExt,
-};
-use notify::{recommended_watcher, Event, RecursiveMode, Watcher};
-use reactive::driver::{
-    ChildProcessKillerDriver, Driver, EprintlnDriver, StaticCommandDriver, StaticOpenThatDriver,
-};
-use thiserror::Error;
-use tokio::process::{Child, Command};
-use url::Url;
+use futures::{FutureExt, SinkExt, StreamExt};
+use reactive::driver::Driver;
 
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    FsWatch(notify::Error),
+    FsWatch(reactive::driver::fs_change::Error),
     #[error(transparent)]
     Io(std::io::Error),
     #[error("no free port")]
@@ -28,57 +17,6 @@ pub enum DevError {
 
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
-
-struct FsChangeDriver<T> {
-    sender: futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
-    path: std::path::PathBuf,
-    boo: std::marker::PhantomData<fn(T) -> std::path::PathBuf>,
-}
-
-impl<T> Driver for FsChangeDriver<T>
-where
-    std::path::PathBuf: From<T>,
-{
-    type Init = T;
-    type Input = ();
-    type Output = LocalBoxStream<'static, notify::Result<notify::Event>>;
-
-    fn new(path: Self::Init) -> (Self, Self::Output) {
-        let (sender, receiver) = futures::channel::mpsc::channel::<notify::Result<Event>>(1);
-
-        let fs_change_driver = Self {
-            sender,
-            path: path.into(),
-            boo: std::marker::PhantomData,
-        };
-
-        (fs_change_driver, receiver.boxed_local())
-    }
-
-    fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
-        let mut sender = self.sender.clone();
-
-        let watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            futures::executor::block_on(sender.feed(result))
-                .expect("this closure gets sent to a blocking context");
-        });
-
-        let mut watcher = match watcher {
-            Ok(watcher) => watcher,
-            Err(error) => {
-                futures::executor::block_on(self.sender.feed(Err(error))).unwrap();
-                return futures::future::pending().boxed_local();
-            }
-        };
-
-        if let Err(error) = watcher.watch(&self.path, RecursiveMode::Recursive) {
-            futures::executor::block_on(self.sender.feed(Err(error))).unwrap();
-            return futures::future::pending().boxed_local();
-        };
-
-        futures::future::pending().boxed_local()
-    }
-}
 
 #[allow(clippy::missing_panics_doc)]
 pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
@@ -89,15 +27,19 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
         .map(|result| result.expect_err("unreachable"))
         .boxed();
 
-    let mut cargo_run_builder = Command::new("cargo");
+    let mut cargo_run_builder = tokio::process::Command::new("cargo");
     cargo_run_builder.args(["run", "--package", BUILDER_CRATE_NAME]);
 
-    let (builder_driver, builder_started) = StaticCommandDriver::new(cargo_run_builder);
-    let (child_process_killer_driver, child_killed) = ChildProcessKillerDriver::new(());
-    let url = Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
-    let (open_url_driver, browser_launch) = StaticOpenThatDriver::new(url.to_string());
-    let (eprintln_driver, _) = EprintlnDriver::new(());
-    let (fs_change_driver, fs_change) = FsChangeDriver::new(BUILDER_CRATE_NAME);
+    let (builder_driver, builder_started) =
+        reactive::driver::command::StaticCommandDriver::new(cargo_run_builder);
+    let (child_process_killer_driver, child_killed) =
+        reactive::driver::child_process_killer::ChildProcessKillerDriver::new(());
+    let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+    let (open_url_driver, browser_launch) =
+        reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string());
+    let (eprintln_driver, _) = reactive::driver::eprintln::EprintlnDriver::new(());
+    let (fs_change_driver, fs_change) =
+        reactive::driver::fs_change::FsChangeDriver::new(BUILDER_CRATE_NAME);
 
     let inputs = Inputs {
         server_task,
@@ -126,7 +68,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
     let stderr_driver_task = eprintln_driver.init(stderr);
     let fs_change_driver_task = fs_change_driver.init(());
 
-    let app_error = select! {
+    let app_error = futures::select! {
         error = app_error.fuse() => error,
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
@@ -141,8 +83,8 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
 
 enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
-    BuilderCrateFsChange(notify::Result<notify::Event>),
-    BuilderStarted(Result<Child, std::io::Error>),
+    FsChange(reactive::driver::fs_change::Result<reactive::driver::fs_change::Event>),
+    BuilderStarted(Result<tokio::process::Child, std::io::Error>),
     BrowserLaunched(Result<(), std::io::Error>),
     ServerError(std::io::Error),
 }
@@ -151,33 +93,100 @@ enum InputEvent {
 enum OutputEvent {
     Stderr(String),
     RunBuilder,
-    KillChild(Child),
+    KillChild(tokio::process::Child),
     Error(DevError),
     OpenBrowser,
 }
 
 struct Inputs {
-    server_task: LocalBoxFuture<'static, std::io::Error>,
-    child_killed: LocalBoxStream<'static, Result<(), std::io::Error>>,
-    fs_change: LocalBoxStream<'static, notify::Result<notify::Event>>,
-    builder_started: LocalBoxStream<'static, Result<Child, std::io::Error>>,
+    server_task: futures::future::LocalBoxFuture<'static, std::io::Error>,
+    child_killed: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
+    fs_change: futures::stream::LocalBoxStream<
+        'static,
+        reactive::driver::fs_change::Result<reactive::driver::fs_change::Event>,
+    >,
+    builder_started:
+        futures::stream::LocalBoxStream<'static, Result<tokio::process::Child, std::io::Error>>,
     launch_browser: bool,
-    open_that_driver: LocalBoxStream<'static, Result<(), std::io::Error>>,
-    local_host_port_url: Url,
+    open_that_driver: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
+    local_host_port_url: reqwest::Url,
 }
 
 struct Outputs {
-    stderr: LocalBoxStream<'static, String>,
-    kill_child: LocalBoxStream<'static, Child>,
-    run_builder: LocalBoxStream<'static, ()>,
-    open_browser: LocalBoxStream<'static, ()>,
-    error: LocalBoxFuture<'static, DevError>,
-    some_task: LocalBoxFuture<'static, ()>,
+    stderr: futures::stream::LocalBoxStream<'static, String>,
+    kill_child: futures::stream::LocalBoxStream<'static, tokio::process::Child>,
+    run_builder: futures::stream::LocalBoxStream<'static, ()>,
+    open_browser: futures::stream::LocalBoxStream<'static, ()>,
+    error: futures::future::LocalBoxFuture<'static, DevError>,
+    some_task: futures::future::LocalBoxFuture<'static, ()>,
 }
 
 #[derive(Debug, Default)]
 struct State {
     builder: BuilderState,
+}
+
+impl State {
+    #[allow(clippy::unnecessary_wraps)]
+    fn builder_killed(&mut self, result: Result<(), std::io::Error>) -> Option<OutputEvent> {
+        match result {
+            Ok(_) => {
+                self.builder = BuilderState::None;
+                Some(OutputEvent::RunBuilder)
+            }
+            Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
+        }
+    }
+
+    fn fs_change(
+        &mut self,
+        result: Result<reactive::driver::fs_change::Event, reactive::driver::fs_change::Error>,
+    ) -> Option<OutputEvent> {
+        match result {
+            Ok(event) => match event.kind {
+                reactive::driver::fs_change::EventKind::Create(_)
+                | reactive::driver::fs_change::EventKind::Modify(_)
+                | reactive::driver::fs_change::EventKind::Remove(_) => match &mut self.builder {
+                    BuilderState::Starting => {
+                        self.builder = BuilderState::Obsolete;
+                        None
+                    }
+                    BuilderState::Started(_) => {
+                        let child = self.builder.killing().unwrap();
+                        Some(OutputEvent::KillChild(child))
+                    }
+                    BuilderState::None | BuilderState::Obsolete => None,
+                },
+                _ => None,
+            },
+            Err(error) => Some(OutputEvent::Error(DevError::FsWatch(error))),
+        }
+    }
+
+    fn builder_started(
+        &mut self,
+        child: Result<tokio::process::Child, std::io::Error>,
+    ) -> Option<OutputEvent> {
+        match child {
+            Ok(child) => match self.builder {
+                BuilderState::None | BuilderState::Starting => {
+                    self.builder = BuilderState::Started(child);
+                    None
+                }
+                BuilderState::Obsolete => {
+                    self.builder = BuilderState::None;
+                    Some(OutputEvent::KillChild(child))
+                }
+                BuilderState::Started(_) => {
+                    // TODO is this reachable?
+                    let current_child = self.builder.killing().unwrap();
+                    self.builder = BuilderState::Started(child);
+                    Some(OutputEvent::KillChild(current_child))
+                }
+            },
+            Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -186,11 +195,11 @@ enum BuilderState {
     Obsolete,
     #[default]
     Starting,
-    Started(Child),
+    Started(tokio::process::Child),
 }
 
 impl BuilderState {
-    fn killing(&mut self) -> Option<Child> {
+    fn killing(&mut self) -> Option<tokio::process::Child> {
         if let Self::Started(child) = std::mem::replace(self, Self::None) {
             Some(child)
         } else {
@@ -220,15 +229,15 @@ fn app(inputs: Inputs) -> Outputs {
     if launch_browser {
         initial.push(OutputEvent::OpenBrowser);
     }
-    let initial = stream::iter(initial);
+    let initial = futures::stream::iter(initial);
 
-    let reaction = stream::select_all([
-        stream::once(server_task)
+    let reaction = futures::stream::select_all([
+        futures::stream::once(server_task)
             .map(InputEvent::ServerError)
             .boxed_local(),
         child_killed.map(InputEvent::BuilderKilled).boxed_local(),
         builder_crate_fs_change
-            .map(InputEvent::BuilderCrateFsChange)
+            .map(InputEvent::FsChange)
             .boxed_local(),
         builder_started
             .map(InputEvent::BuilderStarted)
@@ -239,55 +248,9 @@ fn app(inputs: Inputs) -> Outputs {
     ])
     .scan(State::default(), move |state, input| {
         let emit = match input {
-            InputEvent::BuilderKilled(result) => match result {
-                Ok(_) => {
-                    state.builder = BuilderState::None;
-                    Some(OutputEvent::RunBuilder)
-                }
-                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
-            },
-            InputEvent::BuilderCrateFsChange(result) => match result {
-                Ok(event) => {
-                    match event.kind {
-                        notify::EventKind::Create(_)
-                                        | notify::EventKind::Modify(_)
-                                        | notify::EventKind::Remove(_) => {
-                            match &mut state.builder {
-                                BuilderState::Starting => {
-                                    state.builder = BuilderState::Obsolete;
-                                    None
-                                }
-                                BuilderState::Started(_) => {
-                                    let child = state.builder.killing().unwrap();
-                                    Some(OutputEvent::KillChild(child))
-                                }
-                                BuilderState::None | BuilderState::Obsolete => None,
-                            }
-                        }
-                        _ => None,
-                    }
-                }
-                Err(error) => Some(OutputEvent::Error(DevError::FsWatch(error))),
-            },
-            InputEvent::BuilderStarted(child) => match child {
-                Ok(child) => match state.builder {
-                    BuilderState::None | BuilderState::Starting => {
-                        state.builder = BuilderState::Started(child);
-                        None
-                    }
-                    BuilderState::Obsolete => {
-                        state.builder = BuilderState::None;
-                        Some(OutputEvent::KillChild(child))
-                    }
-                    BuilderState::Started(_) => {
-                        // TODO is this reachable?
-                        let current_child = state.builder.killing().unwrap();
-                        state.builder = BuilderState::Started(child);
-                        Some(OutputEvent::KillChild(current_child))
-                    }
-                },
-                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
-            },
+            InputEvent::BuilderKilled(result) => state.builder_killed(result),
+            InputEvent::FsChange(result) => state.fs_change(result),
+            InputEvent::BuilderStarted(child) => state.builder_started(child),
             InputEvent::BrowserLaunched(result) => match result {
                 Ok(_) => None,
                 Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
@@ -295,9 +258,9 @@ fn app(inputs: Inputs) -> Outputs {
             InputEvent::ServerError(error) => Some(OutputEvent::Error(DevError::Io(error))),
         };
 
-        future::ready(Some(emit))
+        futures::future::ready(Some(emit))
     })
-    .filter_map(future::ready);
+    .filter_map(futures::future::ready);
 
     let output = initial.chain(reaction);
 
