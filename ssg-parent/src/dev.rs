@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use async_fn_stream::fn_stream;
 use camino::Utf8Path;
 use colored::Colorize;
 use futures::{
@@ -317,60 +316,54 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    let (kill_child_sender, mut kill_child_receiver) = futures::channel::mpsc::channel(1);
-    let (run_builder_sender, mut start_builder_receiver) = futures::channel::mpsc::channel(1);
-    let (error_sender, mut error_receiver) = futures::channel::mpsc::channel(1);
-    let (stderr_sender, mut stderr_receiver) = futures::channel::mpsc::channel(1);
-    let (open_browser_sender, mut open_browser_receiver) = futures::channel::mpsc::channel(1);
+    let (kill_child_sender, mut kill_child) = futures::channel::mpsc::channel(1);
+    let (run_builder_sender, mut start_builder) = futures::channel::mpsc::channel(1);
+    let (error_sender, mut error) = futures::channel::mpsc::channel(1);
+    let (stderr_sender, mut stderr) = futures::channel::mpsc::channel(1);
+    let (open_browser_sender, mut open_browser) = futures::channel::mpsc::channel(1);
 
-    let kill_child = fn_stream(|emitter| async move {
-        loop {
-            let value = kill_child_receiver.recv().await.expect(NEVER_ENDING_STREAM);
-            emitter.emit(value).await;
-        }
-    })
-    .boxed_local();
+    // let kill_child = fn_stream(|emitter| async move {
+    //     loop {
+    //         let value = kill_child_receiver.recv().await.expect(NEVER_ENDING_STREAM);
+    //         emitter.emit(value).await;
+    //     }
+    // })
+    // .boxed_local();
 
-    let run_builder = fn_stream(|emitter| async move {
-        loop {
-            start_builder_receiver
-                .recv()
-                .await
-                .expect(NEVER_ENDING_STREAM);
-            emitter.emit(()).await;
-        }
-    })
-    .boxed_local();
+    // let run_builder = fn_stream(|emitter| async move {
+    //     loop {
+    //         start_builder_receiver
+    //             .recv()
+    //             .await
+    //             .expect(NEVER_ENDING_STREAM);
+    //         emitter.emit(()).await;
+    //     }
+    // })
+    // .boxed_local();
 
-    let open_browser = fn_stream(|emitter| async move {
-        loop {
-            open_browser_receiver
-                .recv()
-                .await
-                .expect(NEVER_ENDING_STREAM);
-            emitter.emit(()).await;
-        }
-    })
-    .boxed_local();
+    // let open_browser = fn_stream(|emitter| async move {
+    //     loop {
+    //         open_browser_receiver
+    //             .recv()
+    //             .await
+    //             .expect(NEVER_ENDING_STREAM);
+    //         emitter.emit(()).await;
+    //     }
+    // })
+    // .boxed_local();
 
-    let error = fn_stream(|emitter| async move {
-        loop {
-            let value = error_receiver.recv().await.expect(NEVER_ENDING_STREAM);
-            emitter.emit(value).await;
-        }
-    })
-    .boxed_local()
+    let error = error
     .into_future()
     .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
     .boxed_local();
 
-    let stderr = fn_stream(|emitter| async move {
-        loop {
-            let value = stderr_receiver.recv().await.expect(NEVER_ENDING_STREAM);
-            emitter.emit(value).await;
-        }
-    })
-    .boxed_local();
+    // let stderr = fn_stream(|emitter| async move {
+    //     loop {
+    //         let value = stderr_receiver.recv().await.expect(NEVER_ENDING_STREAM);
+    //         emitter.emit(value).await;
+    //     }
+    // })
+    // .boxed_local();
 
     let some_task = output
         .for_each(move |event| match event {
