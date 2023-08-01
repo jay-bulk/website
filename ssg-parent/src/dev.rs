@@ -4,10 +4,11 @@ use async_fn_stream::{fn_stream, try_fn_stream};
 use camino::Utf8Path;
 use colored::Colorize;
 use futures::{
+    executor::block_on,
     future::{self, LocalBoxFuture},
     select,
     stream::{self, LocalBoxStream},
-    FutureExt, StreamExt, TryStreamExt, SinkExt, executor::block_on
+    FutureExt, SinkExt, StreamExt, TryStreamExt,
 };
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use reactive::driver::{
@@ -33,6 +34,23 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
+struct FsChangeDriver(futures::channel::mpsc::Sender<notify::Result<()>>);
+
+impl Driver for FsChangeDriver {
+    type Init = ();
+    type Input = ();
+    type Output = LocalBoxStream<'static, notify::Result<()>>;
+
+    fn new(init: Self::Init) -> (Self, Self::Output) {
+        let (sender, receiver) = futures::channel::mpsc::channel::<nofity::Result<()>>(1);
+        (Self, )
+    }
+
+    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
+        todo!()
+    }
+}
+
 #[allow(clippy::missing_panics_doc)]
 pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
@@ -46,8 +64,7 @@ pub async fn dev<O: AsRef<Utf8Path>>(launch_browser: bool, output_dir: O) -> Dev
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mut watcher = recommended_watcher(move |result: Result<Event, notify::Error>| {
-            block_on( sender.feed(result) )
-                .expect("this closure gets sent to a blocking context");
+            block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
         })?;
 
         watcher.watch(&PathBuf::from(BUILDER_CRATE_NAME), RecursiveMode::Recursive)?;
