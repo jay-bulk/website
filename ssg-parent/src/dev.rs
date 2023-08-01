@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, path::PathBuf};
+use std::marker::PhantomData;
 
 use colored::Colorize;
 use futures::{
@@ -28,18 +28,20 @@ pub enum DevError {
     NoFreePort,
 }
 
-
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-struct FsChangeDriver(
+struct FsChangeDriver<T>(
     futures::channel::mpsc::Sender<notify::Result<notify::Event>>,
     std::path::PathBuf,
+    std::marker::PhantomData<T>,
 );
 
-impl Driver for FsChangeDriver
+impl<T> Driver for FsChangeDriver<T>
+where
+    std::path::PathBuf: From<T>,
 {
-    type Init<T> = T where std::path::PathBuf: From<T>;
+    type Init = T;
     type Input = ();
     type Output = LocalBoxStream<'static, notify::Result<()>>;
 
@@ -55,7 +57,10 @@ impl Driver for FsChangeDriver
             })
             .boxed_local();
 
-        (Self(sender, init), receiver)
+        (
+            Self(sender, init.into(), std::marker::PhantomData),
+            receiver,
+        )
     }
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
@@ -74,10 +79,7 @@ impl Driver for FsChangeDriver
             }
         };
 
-        if let Err(error) = watcher.watch(
-            &std::path::PathBuf::from(BUILDER_CRATE_NAME),
-            RecursiveMode::Recursive,
-        ) {
+        if let Err(error) = watcher.watch(&self.1, RecursiveMode::Recursive) {
             futures::executor::block_on(self.0.feed(Err(error))).unwrap();
             return futures::future::pending().boxed_local();
         };
