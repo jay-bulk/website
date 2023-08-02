@@ -270,10 +270,7 @@ fn app(inputs: Inputs) -> Outputs {
     let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
     let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
-    let error = error
-        .into_future()
-        .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
-        .boxed_local();
+
 
     let some_task = output
         .for_each(move |event| match event {
@@ -313,6 +310,11 @@ fn app(inputs: Inputs) -> Outputs {
                 .boxed_local()
             }
         })
+        .boxed_local();
+
+    let error = error
+        .into_future()
+        .map(|(error, _tail_of_stream)| error.expect(NEVER_ENDING_STREAM))
         .boxed_local();
 
     Outputs {
