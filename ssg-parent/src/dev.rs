@@ -282,7 +282,7 @@ fn app(inputs: Inputs) -> Outputs {
             $( $pattern => {
                 let mut sender_clone = run_builder_sender.clone();
                 async move {
-                    sender_clone.send($mapper).await.expect(NEVER_ENDING_STREAM);
+                    sender_clone.send($mapper).await.unwrap();
                 }
                 .boxed_local()
             })*
