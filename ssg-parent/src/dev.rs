@@ -208,8 +208,6 @@ impl BuilderState {
     }
 }
 
-// TODO too many lines
-#[allow(clippy::too_many_lines)]
 fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
@@ -272,23 +270,11 @@ fn app(inputs: Inputs) -> Outputs {
 
     let some_task = output
         .for_each(move |event| match event {
-            OutputEvent::RunBuilder => fun_name(&run_builder_sender, ()),
-            OutputEvent::KillChild(child) => fun_name(&kill_child_sender, child) 
-            OutputEvent::Error(error) => fun_name(&error_sender, error),
-            OutputEvent::Stderr(output) => {
-                let mut sender_clone = stderr_sender.clone();
-                async move {
-                    sender_clone.send(output).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
-            OutputEvent::OpenBrowser => {
-                let mut sender_clone = open_browser_sender.clone();
-                async move {
-                    sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
+            OutputEvent::RunBuilder => send_event_value(&run_builder_sender, ()),
+            OutputEvent::KillChild(child) => send_event_value(&kill_child_sender, child),
+            OutputEvent::Error(error) => send_event_value(&error_sender, error),
+            OutputEvent::Stderr(output) => send_event_value(&stderr_sender, output),
+            OutputEvent::OpenBrowser => send_event_value(&open_browser_sender, ()),
         })
         .boxed_local();
 
@@ -307,7 +293,7 @@ fn app(inputs: Inputs) -> Outputs {
     }
 }
 
-fn fun_name<T: 'static>(
+fn send_event_value<T: 'static>(
     sender: &futures::channel::mpsc::Sender<T>,
     value: T,
 ) -> std::pin::Pin<Box<dyn futures::Future<Output = ()>>> {
