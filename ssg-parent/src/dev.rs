@@ -20,7 +20,9 @@ const LOCALHOST: &str = "localhost";
 #[allow(clippy::missing_panics_doc)]
 pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
-    let Some(port) = portpicker::pick_unused_port() else { return DevError::NoFreePort };
+    let Some(port) = portpicker::pick_unused_port() else {
+        return DevError::NoFreePort
+    };
 
     let server_task = live_server::listen(LOCALHOST, port, output_dir.as_std_path().to_owned())
         .map(|result| result.expect_err("unreachable"))
