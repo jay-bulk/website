@@ -264,13 +264,21 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    let (kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
-    let (run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
-    let (error_sender, error) = futures::channel::mpsc::channel(1);
-    let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
-    let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
+    macro_rules! stream_split {
+        () => {
+            
+        };
+    }
 
+    // let (kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
+    // let (run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
+    // let (error_sender, error) = futures::channel::mpsc::channel(1);
+    // let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
+    // let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
+    let (kill_child, run_builder, error, stderr, open_browser) = stream_split! {
+        source: output,
+    };
 
     let some_task = output
         .for_each(move |event| match event {
