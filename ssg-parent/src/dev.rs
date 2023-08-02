@@ -277,7 +277,18 @@ fn app(inputs: Inputs) -> Outputs {
             $(,)?
         ) => {
             {
-
+    let some_task = output
+        .for_each(move |event| match event {
+            $( $pattern => {
+                let mut sender_clone = run_builder_sender.clone();
+                async move {
+                    sender_clone.send($mapper).await.expect(NEVER_ENDING_STREAM);
+                }
+                .boxed_local()
+            })*
+            }
+        })
+        .boxed_local();
             }
         };
     }
