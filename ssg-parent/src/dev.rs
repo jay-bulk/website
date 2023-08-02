@@ -1,6 +1,6 @@
 use colored::Colorize;
 use futures::{FutureExt, SinkExt, StreamExt};
-use reactive::driver::{Driver, child_process_killer};
+use reactive::driver::Driver;
 
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
@@ -30,11 +30,12 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
     let mut cargo_run_builder = tokio::process::Command::new("cargo");
     cargo_run_builder.args(["run", "--package", BUILDER_CRATE_NAME]);
 
+    let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+
     let (builder_driver, builder_started) =
         reactive::driver::command::StaticCommandDriver::new(cargo_run_builder);
     let (child_process_killer_driver, child_killed) =
         reactive::driver::child_process_killer::ChildProcessKillerDriver::new(());
-    let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
     let (open_url_driver, browser_launch) =
         reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = reactive::driver::eprintln::EprintlnDriver::new(());
@@ -68,7 +69,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
     let stderr_driver_task = eprintln_driver.init(stderr);
     let fs_change_driver_task = fs_change_driver.init(());
 
-    let app_error = futures::select! {
+    futures::select! {
         error = app_error.fuse() => error,
         _ = builder_driver_task.fuse() => unreachable!(),
         _ = child_killer_task.fuse() => unreachable!(),
@@ -76,9 +77,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
         _ = open_url_driver_task.fuse() => unreachable!(),
         _ = some_task.fuse() => unreachable!(),
         _ = fs_change_driver_task.fuse() => unreachable!(),
-    };
-
-    app_error
+    }
 }
 
 enum InputEvent {
@@ -127,6 +126,19 @@ struct State {
 }
 
 impl State {
+    fn input_event(&mut self, input: InputEvent) -> Option<OutputEvent> {
+        match input {
+            InputEvent::BuilderKilled(result) => self.builder_killed(result),
+            InputEvent::FsChange(result) => self.fs_change(result),
+            InputEvent::BuilderStarted(child) => self.builder_started(child),
+            InputEvent::BrowserLaunched(result) => match result {
+                Ok(_) => None,
+                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
+            },
+            InputEvent::ServerError(error) => Some(OutputEvent::Error(DevError::Io(error))),
+        }
+    }
+
     #[allow(clippy::unnecessary_wraps)]
     fn builder_killed(&mut self, result: Result<(), std::io::Error>) -> Option<OutputEvent> {
         match result {
@@ -245,18 +257,7 @@ fn app(inputs: Inputs) -> Outputs {
             .boxed_local(),
     ])
     .scan(State::default(), move |state, input| {
-        let emit = match input {
-            InputEvent::BuilderKilled(result) => state.builder_killed(result),
-            InputEvent::FsChange(result) => state.fs_change(result),
-            InputEvent::BuilderStarted(child) => state.builder_started(child),
-            InputEvent::BrowserLaunched(result) => match result {
-                Ok(_) => None,
-                Err(error) => Some(OutputEvent::Error(DevError::Io(error))),
-            },
-            InputEvent::ServerError(error) => Some(OutputEvent::Error(DevError::Io(error))),
-        };
-
-        futures::future::ready(Some(emit))
+        futures::future::ready(Some(state.input_event(input)))
     })
     .filter_map(futures::future::ready);
 
