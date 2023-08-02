@@ -277,7 +277,7 @@ fn app(inputs: Inputs) -> Outputs {
     // let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
     let (kill_child, run_builder, error, stderr, open_browser) = stream_split! {
-        source: output,
+        OutputEvent::RunBuilder => ,
     };
 
     let some_task = output
