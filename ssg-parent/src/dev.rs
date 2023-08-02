@@ -1,6 +1,6 @@
 use colored::Colorize;
 use futures::{FutureExt, SinkExt, StreamExt};
-use reactive::driver::Driver;
+use reactive::driver::{Driver, child_process_killer};
 
 const NEVER_ENDING_STREAM: &str = "never ending stream";
 
@@ -264,89 +264,33 @@ fn app(inputs: Inputs) -> Outputs {
 
     let output = initial.chain(reaction);
 
-    // let (kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
-    // let (run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
-    // let (error_sender, error) = futures::channel::mpsc::channel(1);
-    // let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
-    // let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
+    let (kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
+    let (run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
+    let (error_sender, error) = futures::channel::mpsc::channel(1);
+    let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
+    let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
-    macro_rules! stream_split {
-        (
-            $input_stream:ident;
-            $($pattern:pat => $mapper:expr),*
-            $(,)?
-        ) => {
-            {
-                $(
-                    // TODO channel buffer size or unbounded
-                    let (sender_n, receiver_n) = ::futures::channel::mpsc::channel(1);
-                 )*
-
-                let some_task = $input_stream
-                    .for_each(move |event| match event {
-                        $(
-                            $pattern => {
-                                let mut sender_clone = run_builder_sender.clone();
-                                async move {
-                                    sender_clone.send($mapper).await.expect("TODO MESSAGE");
-                                }
-                                .boxed_local()
-                            }
-                        )*
-                    })
-                    .boxed_local();
+    let some_task = output
+        .for_each(move |event| match event {
+            OutputEvent::RunBuilder => fun_name(&run_builder_sender, ()),
+            OutputEvent::KillChild(child) => fun_name(&kill_child_sender, child) 
+            OutputEvent::Error(error) => fun_name(&error_sender, error),
+            OutputEvent::Stderr(output) => {
+                let mut sender_clone = stderr_sender.clone();
+                async move {
+                    sender_clone.send(output).await.expect(NEVER_ENDING_STREAM);
+                }
+                .boxed_local()
             }
-        }
-    }
-
-    let (kill_child, run_builder, error, stderr, open_browser, some_task) = stream_split! {
-        output;
-        OutputEvent::RunBuilder => (),
-        OutputEvent::KillChild(child) => child,
-        OutputEvent::Error(error) => error,
-        OutputEvent::Stderr(output) => output,
-        OutputEvent::OpenBrowser => (),
-    };
-
-    // let some_task = output
-    //     .for_each(move |event| match event {
-    //         OutputEvent::RunBuilder => {
-    //             let mut sender_clone = run_builder_sender.clone();
-    //             async move {
-    //                 sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
-    //             }
-    //             .boxed_local()
-    //         }
-    //         OutputEvent::KillChild(child) => {
-    //             let mut sender_clone = kill_child_sender.clone();
-    //             async move {
-    //                 sender_clone.send(child).await.expect(NEVER_ENDING_STREAM);
-    //             }
-    //             .boxed_local()
-    //         }
-    //         OutputEvent::Error(error) => {
-    //             let mut sender_clone = error_sender.clone();
-    //             async move {
-    //                 sender_clone.send(error).await.expect(NEVER_ENDING_STREAM);
-    //             }
-    //             .boxed_local()
-    //         }
-    //         OutputEvent::Stderr(output) => {
-    //             let mut sender_clone = stderr_sender.clone();
-    //             async move {
-    //                 sender_clone.send(output).await.expect(NEVER_ENDING_STREAM);
-    //             }
-    //             .boxed_local()
-    //         }
-    //         OutputEvent::OpenBrowser => {
-    //             let mut sender_clone = open_browser_sender.clone();
-    //             async move {
-    //                 sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
-    //             }
-    //             .boxed_local()
-    //         }
-    //     })
-    //     .boxed_local();
+            OutputEvent::OpenBrowser => {
+                let mut sender_clone = open_browser_sender.clone();
+                async move {
+                    sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
+                }
+                .boxed_local()
+            }
+        })
+        .boxed_local();
 
     let error = error
         .into_future()
@@ -361,4 +305,15 @@ fn app(inputs: Inputs) -> Outputs {
         error,
         some_task,
     }
+}
+
+fn fun_name<T: 'static>(
+    sender: &futures::channel::mpsc::Sender<T>,
+    value: T,
+) -> std::pin::Pin<Box<dyn futures::Future<Output = ()>>> {
+    let mut sender_clone = sender.clone();
+    async move {
+        sender_clone.send(value).await.expect(NEVER_ENDING_STREAM);
+    }
+    .boxed_local()
 }
