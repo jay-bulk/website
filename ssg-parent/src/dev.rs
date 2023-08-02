@@ -276,23 +276,23 @@ fn app(inputs: Inputs) -> Outputs {
             $($pattern:pat => $mapper:expr),*
             $(,)?
         ) => {
-            
-    let some_task = output
-        .for_each(move |event| match event {
-            $( $pattern => {
-                let mut sender_clone = run_builder_sender.clone();
-                async move {
-                    sender_clone.send($mapper).await.expect("TODO MESSAGE");
-                }
-                .boxed_local()
-            })*
+            {
+                let some_task = output
+                    .for_each(move |event| match event {
+                        $(
+                            $pattern => {
+                                let mut sender_clone = run_builder_sender.clone();
+                                async move {
+                                    sender_clone.send($mapper).await.expect("TODO MESSAGE");
+                                }
+                                .boxed_local()
+                            }
+                        )*
+                    })
+                    .boxed_local();
             }
-        )
-        .boxed_local();
-            }
-        
-        };
-    
+        }
+    }
 
     let (kill_child, run_builder, error, stderr, open_browser, some_task) = stream_split! {
         output;
@@ -303,45 +303,45 @@ fn app(inputs: Inputs) -> Outputs {
         OutputEvent::OpenBrowser => (),
     };
 
-    let some_task = output
-        .for_each(move |event| match event {
-            OutputEvent::RunBuilder => {
-                let mut sender_clone = run_builder_sender.clone();
-                async move {
-                    sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
-            OutputEvent::KillChild(child) => {
-                let mut sender_clone = kill_child_sender.clone();
-                async move {
-                    sender_clone.send(child).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
-            OutputEvent::Error(error) => {
-                let mut sender_clone = error_sender.clone();
-                async move {
-                    sender_clone.send(error).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
-            OutputEvent::Stderr(output) => {
-                let mut sender_clone = stderr_sender.clone();
-                async move {
-                    sender_clone.send(output).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
-            OutputEvent::OpenBrowser => {
-                let mut sender_clone = open_browser_sender.clone();
-                async move {
-                    sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
-        })
-        .boxed_local();
+    // let some_task = output
+    //     .for_each(move |event| match event {
+    //         OutputEvent::RunBuilder => {
+    //             let mut sender_clone = run_builder_sender.clone();
+    //             async move {
+    //                 sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
+    //             }
+    //             .boxed_local()
+    //         }
+    //         OutputEvent::KillChild(child) => {
+    //             let mut sender_clone = kill_child_sender.clone();
+    //             async move {
+    //                 sender_clone.send(child).await.expect(NEVER_ENDING_STREAM);
+    //             }
+    //             .boxed_local()
+    //         }
+    //         OutputEvent::Error(error) => {
+    //             let mut sender_clone = error_sender.clone();
+    //             async move {
+    //                 sender_clone.send(error).await.expect(NEVER_ENDING_STREAM);
+    //             }
+    //             .boxed_local()
+    //         }
+    //         OutputEvent::Stderr(output) => {
+    //             let mut sender_clone = stderr_sender.clone();
+    //             async move {
+    //                 sender_clone.send(output).await.expect(NEVER_ENDING_STREAM);
+    //             }
+    //             .boxed_local()
+    //         }
+    //         OutputEvent::OpenBrowser => {
+    //             let mut sender_clone = open_browser_sender.clone();
+    //             async move {
+    //                 sender_clone.send(()).await.expect(NEVER_ENDING_STREAM);
+    //             }
+    //             .boxed_local()
+    //         }
+    //     })
+    //     .boxed_local();
 
     let error = error
         .into_future()
