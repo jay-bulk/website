@@ -272,12 +272,17 @@ fn app(inputs: Inputs) -> Outputs {
 
     macro_rules! stream_split {
         (
-            $input:ident;
+            $input_stream:ident;
             $($pattern:pat => $mapper:expr),*
             $(,)?
         ) => {
             {
-                let some_task = output
+                $(
+                    // TODO channel buffer size or unbounded
+                    let (sender_n, receiver_n) = ::futures::channel::mpsc::channel(1);
+                 )*
+
+                let some_task = $input_stream
                     .for_each(move |event| match event {
                         $(
                             $pattern => {
