@@ -270,7 +270,17 @@ fn app(inputs: Inputs) -> Outputs {
     let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
     let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
-
+    #[allow(clippy::items_after_statements)]
+    fn fun_name<T>(
+        kill_child_sender: &futures::channel::mpsc::Sender<T>,
+        value: T,
+    ) -> std::pin::Pin<Box<dyn futures::Future<Output = ()>>> {
+        let mut sender_clone = kill_child_sender.clone();
+        async move {
+            sender_clone.send(value).await.expect(NEVER_ENDING_STREAM);
+        }
+        .boxed_local()
+    }
 
     let some_task = output
         .for_each(move |event| match event {
@@ -281,13 +291,7 @@ fn app(inputs: Inputs) -> Outputs {
                 }
                 .boxed_local()
             }
-            OutputEvent::KillChild(child) => {
-                let mut sender_clone = kill_child_sender.clone();
-                async move {
-                    sender_clone.send(child).await.expect(NEVER_ENDING_STREAM);
-                }
-                .boxed_local()
-            }
+            OutputEvent::KillChild(child) => fun_name(&kill_child_sender, child),
             OutputEvent::Error(error) => {
                 let mut sender_clone = error_sender.clone();
                 async move {
