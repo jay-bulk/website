@@ -276,22 +276,23 @@ fn app(inputs: Inputs) -> Outputs {
             $($pattern:pat => $mapper:expr),*
             $(,)?
         ) => {
-            {
+            
     let some_task = output
         .for_each(move |event| match event {
             $( $pattern => {
                 let mut sender_clone = run_builder_sender.clone();
                 async move {
-                    sender_clone.send($mapper).await.unwrap();
+                    sender_clone.send($mapper).await.expect("TODO MESSAGE");
                 }
                 .boxed_local()
             })*
             }
-        })
+        )
         .boxed_local();
             }
+        
         };
-    }
+    
 
     let (kill_child, run_builder, error, stderr, open_browser, some_task) = stream_split! {
         output;
