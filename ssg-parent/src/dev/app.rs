@@ -5,7 +5,7 @@ use futures::{FutureExt, SinkExt, StreamExt};
 
 enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
-    FsChange(reactive::driver::fs_change::Result<reactive::driver::fs_change::Event>),
+    FsChange(reactive::driver::notify::Result<reactive::driver::notify::Event>),
     BuilderStarted(Result<tokio::process::Child, std::io::Error>),
     BrowserLaunched(Result<(), std::io::Error>),
     ServerError(std::io::Error),
@@ -36,7 +36,7 @@ pub(super) struct Inputs {
     pub(super) child_killed: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
     pub(super) fs_change: futures::stream::LocalBoxStream<
         'static,
-        reactive::driver::fs_change::Result<reactive::driver::fs_change::Event>,
+        reactive::driver::notify::Result<reactive::driver::notify::Event>,
     >,
     pub(super) builder_started:
         futures::stream::LocalBoxStream<'static, Result<tokio::process::Child, std::io::Error>>,

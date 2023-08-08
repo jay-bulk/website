@@ -39,13 +39,13 @@ impl State {
 
     fn fs_change(
         &mut self,
-        result: Result<reactive::driver::fs_change::Event, reactive::driver::fs_change::Error>,
+        result: Result<reactive::driver::notify::Event, reactive::driver::notify::Error>,
     ) -> Option<super::OutputEvent> {
         match result {
             Ok(event) => match event.kind {
-                reactive::driver::fs_change::EventKind::Create(_)
-                | reactive::driver::fs_change::EventKind::Modify(_)
-                | reactive::driver::fs_change::EventKind::Remove(_) => {
+                reactive::driver::notify::EventKind::Create(_)
+                | reactive::driver::notify::EventKind::Modify(_)
+                | reactive::driver::notify::EventKind::Remove(_) => {
                     match &mut self.builder {
                         BuilderState::Starting => {
                             self.builder = BuilderState::Obsolete;
@@ -60,7 +60,7 @@ impl State {
                 }
                 _ => None,
             },
-            Err(error) => Some(super::OutputEvent::Error(super::super::DevError::FsWatch(
+            Err(error) => Some(super::OutputEvent::Error(super::super::DevError::Notify(
                 error,
             ))),
         }

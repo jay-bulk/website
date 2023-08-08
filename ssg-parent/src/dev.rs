@@ -7,7 +7,7 @@ use reactive::driver::Driver;
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    FsWatch(reactive::driver::fs_change::Error),
+    Notify(reactive::driver::notify::Error),
     #[error(transparent)]
     Io(std::io::Error),
     #[error("no free port")]
@@ -17,7 +17,6 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-#[allow(clippy::missing_panics_doc)]
 pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
     let output_dir = output_dir.as_ref().to_owned();
     let Some(port) = portpicker::pick_unused_port() else {
@@ -31,7 +30,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
     let mut cargo_run_builder = tokio::process::Command::new("cargo");
     cargo_run_builder.args(["run", "--package", BUILDER_CRATE_NAME]);
 
-    let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).unwrap();
+    let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).expect("valid");
 
     let (builder_driver, builder_started) =
         reactive::driver::command::StaticCommandDriver::new(cargo_run_builder);
@@ -41,7 +40,7 @@ pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O
         reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string());
     let (eprintln_driver, _) = reactive::driver::eprintln::EprintlnDriver::new(());
     let (fs_change_driver, fs_change) =
-        reactive::driver::fs_change::FsChangeDriver::new(BUILDER_CRATE_NAME);
+        reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME);
 
     let inputs = app::Inputs {
         server_task,
