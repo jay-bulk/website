@@ -20,7 +20,7 @@ enum OutputEvent {
     OpenBrowser,
 }
 
-fn sender_return_task_that_sends_and_unwraps<T: 'static>(
+fn into_send<T: 'static>(
     mut sender: futures::channel::mpsc::Sender<T>,
     value: T,
 ) -> std::pin::Pin<Box<dyn futures::Future<Output = ()>>> {
@@ -103,19 +103,19 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     let some_task = output
         .for_each(move |event| match event {
             OutputEvent::RunBuilder => {
-                sender_return_task_that_sends_and_unwraps(run_builder_sender.clone(), ())
+                into_send(run_builder_sender.clone(), ())
             }
             OutputEvent::KillChildProcess(child) => {
-                sender_return_task_that_sends_and_unwraps(kill_child_sender.clone(), child)
+                into_send(kill_child_sender.clone(), child)
             }
             OutputEvent::Error(error) => {
-                sender_return_task_that_sends_and_unwraps(error_sender.clone(), error)
+                into_send(error_sender.clone(), error)
             }
             OutputEvent::Stderr(output) => {
-                sender_return_task_that_sends_and_unwraps(stderr_sender.clone(), output)
+                into_send(stderr_sender.clone(), output)
             }
             OutputEvent::OpenBrowser => {
-                sender_return_task_that_sends_and_unwraps(open_browser_sender.clone(), ())
+                into_send(open_browser_sender.clone(), ())
             }
         })
         .boxed_local();
