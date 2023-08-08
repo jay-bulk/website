@@ -102,21 +102,11 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
 
     let some_task = output
         .for_each(move |event| match event {
-            OutputEvent::RunBuilder => {
-                into_send(run_builder_sender.clone(), ())
-            }
-            OutputEvent::KillChildProcess(child) => {
-                into_send(kill_child_sender.clone(), child)
-            }
-            OutputEvent::Error(error) => {
-                into_send(error_sender.clone(), error)
-            }
-            OutputEvent::Stderr(output) => {
-                into_send(stderr_sender.clone(), output)
-            }
-            OutputEvent::OpenBrowser => {
-                into_send(open_browser_sender.clone(), ())
-            }
+            OutputEvent::RunBuilder => into_send(run_builder_sender.clone(), ()),
+            OutputEvent::KillChildProcess(child) => into_send(kill_child_sender.clone(), child),
+            OutputEvent::Error(error) => into_send(error_sender.clone(), error),
+            OutputEvent::Stderr(output) => into_send(stderr_sender.clone(), output),
+            OutputEvent::OpenBrowser => into_send(open_browser_sender.clone(), ()),
         })
         .boxed_local();
 
