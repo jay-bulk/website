@@ -17,8 +17,10 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-pub async fn dev<O: AsRef<camino::Utf8Path>>(launch_browser: bool, output_dir: O) -> DevError {
-    let output_dir = output_dir.as_ref().to_owned();
+pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError 
+  where camino::Utf8PathBuf : From<O>
+{
+    let output_dir = camino::Utf8PathBuf::from( output_dir);
     let Some(port) = portpicker::pick_unused_port() else {
         return DevError::NoFreePort
     };
