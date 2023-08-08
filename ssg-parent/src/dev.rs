@@ -62,22 +62,22 @@ where
         error,
         kill_child,
         run_builder,
-        some_task,
+        stream_splitter_task,
     } = outputs;
 
     let builder_driver_task = builder_driver.init(run_builder);
-    let child_killer_task = child_process_killer_driver.init(kill_child);
-    let open_url_driver_task = open_browser_driver.init(open_browser);
+    let child_process_killer_driver_task = child_process_killer_driver.init(kill_child);
+    let open_browser_driver_task = open_browser_driver.init(open_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
-    let fs_change_driver_task = notify_driver.init(());
+    let notify_driver_task = notify_driver.init(());
 
     futures::select! {
-        error = app_error.fuse() => error,
+        error = error.fuse() => error,
         _ = builder_driver_task.fuse() => unreachable!(),
-        _ = child_killer_task.fuse() => unreachable!(),
+        _ = child_process_killer_driver_task.fuse() => unreachable!(),
         _ = stderr_driver_task.fuse() => unreachable!(),
-        _ = open_url_driver_task.fuse() => unreachable!(),
-        _ = some_task.fuse() => unreachable!(),
-        _ = fs_change_driver_task.fuse() => unreachable!(),
+        _ = open_browser_driver_task.fuse() => unreachable!(),
+        _ = stream_splitter_task.fuse() => unreachable!(),
+        _ = notify_driver_task.fuse() => unreachable!(),
     }
 }

@@ -9,9 +9,9 @@ impl State {
     ) -> Option<super::OutputEvent> {
         match input {
             super::InputEvent::BuilderKilled(result) => self.builder_killed(result),
-            super::InputEvent::FsChange(result) => self.fs_change(result),
+            super::InputEvent::Notify(result) => self.fs_change(result),
             super::InputEvent::BuilderStarted(child) => self.builder_started(child),
-            super::InputEvent::BrowserLaunched(result) => match result {
+            super::InputEvent::BrowserOpened(result) => match result {
                 Ok(_) => None,
                 Err(error) => {
                     Some(super::OutputEvent::Error(super::super::DevError::Io(error)))
@@ -53,7 +53,7 @@ impl State {
                         }
                         BuilderState::Started(_) => {
                             let child = self.builder.killing().unwrap();
-                            Some(super::OutputEvent::KillChild(child))
+                            Some(super::OutputEvent::KillChildProcess(child))
                         }
                         BuilderState::None | BuilderState::Obsolete => None,
                     }
@@ -78,13 +78,13 @@ impl State {
                 }
                 BuilderState::Obsolete => {
                     self.builder = BuilderState::None;
-                    Some(super::OutputEvent::KillChild(child))
+                    Some(super::OutputEvent::KillChildProcess(child))
                 }
                 BuilderState::Started(_) => {
                     // TODO is this reachable?
                     let current_child = self.builder.killing().unwrap();
                     self.builder = BuilderState::Started(child);
-                    Some(super::OutputEvent::KillChild(current_child))
+                    Some(super::OutputEvent::KillChildProcess(current_child))
                 }
             },
             Err(error) => Some(super::OutputEvent::Error(super::super::DevError::Io(error))),

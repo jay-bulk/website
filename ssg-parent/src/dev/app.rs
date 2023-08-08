@@ -5,9 +5,9 @@ use futures::{FutureExt, SinkExt, StreamExt};
 
 enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
-    FsChange(reactive::driver::notify::Result<reactive::driver::notify::Event>),
+    Notify(reactive::driver::notify::Result<reactive::driver::notify::Event>),
     BuilderStarted(Result<tokio::process::Child, std::io::Error>),
-    BrowserLaunched(Result<(), std::io::Error>),
+    BrowserOpened(Result<(), std::io::Error>),
     ServerError(std::io::Error),
 }
 
@@ -15,7 +15,7 @@ enum InputEvent {
 enum OutputEvent {
     Stderr(String),
     RunBuilder,
-    KillChild(tokio::process::Child),
+    KillChildProcess(tokio::process::Child),
     Error(super::DevError),
     OpenBrowser,
 }
@@ -41,8 +41,7 @@ pub(super) struct Inputs {
     pub(super) builder_started:
         futures::stream::LocalBoxStream<'static, Result<tokio::process::Child, std::io::Error>>,
     pub(super) launch_browser: bool,
-    pub(super) browser_opened:
-        futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
+    pub(super) browser_opened: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
     pub(super) url: reqwest::Url,
 }
 
@@ -52,7 +51,7 @@ pub(super) struct Outputs {
     pub(super) run_builder: futures::stream::LocalBoxStream<'static, ()>,
     pub(super) open_browser: futures::stream::LocalBoxStream<'static, ()>,
     pub(super) error: futures::future::LocalBoxFuture<'static, super::DevError>,
-    pub(super) some_task: futures::future::LocalBoxFuture<'static, ()>,
+    pub(super) stream_splitter_task: futures::future::LocalBoxFuture<'static, ()>,
 }
 
 pub(super) fn app(inputs: Inputs) -> Outputs {
@@ -82,14 +81,12 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
             .boxed_local(),
         child_killed.map(InputEvent::BuilderKilled).boxed_local(),
         builder_crate_fs_change
-            .map(InputEvent::FsChange)
+            .map(InputEvent::Notify)
             .boxed_local(),
         builder_started
             .map(InputEvent::BuilderStarted)
             .boxed_local(),
-        browser_launch
-            .map(InputEvent::BrowserLaunched)
-            .boxed_local(),
+        browser_launch.map(InputEvent::BrowserOpened).boxed_local(),
     ])
     .scan(state::State::default(), move |state, input| {
         futures::future::ready(Some(state.input_event(input)))
@@ -107,7 +104,7 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     let some_task = output
         .for_each(move |event| match event {
             OutputEvent::RunBuilder => send_event_value(&run_builder_sender, ()),
-            OutputEvent::KillChild(child) => send_event_value(&kill_child_sender, child),
+            OutputEvent::KillChildProcess(child) => send_event_value(&kill_child_sender, child),
             OutputEvent::Error(error) => send_event_value(&error_sender, error),
             OutputEvent::Stderr(output) => send_event_value(&stderr_sender, output),
             OutputEvent::OpenBrowser => send_event_value(&open_browser_sender, ()),
@@ -125,6 +122,6 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
         run_builder: run_builder.boxed_local(),
         open_browser: open_browser.boxed_local(),
         error,
-        some_task,
+        stream_splitter_task: some_task,
     }
 }
