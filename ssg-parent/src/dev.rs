@@ -47,19 +47,19 @@ where
     let inputs = app::Inputs {
         server_task,
         child_killed,
-        fs_change: notify,
+        notify,
         builder_started,
         launch_browser,
-        open_that_driver: browser_opened,
-        local_host_port_url: url,
+        browser_opened,
+        url,
     };
 
     let outputs = app::app(inputs);
 
     let app::Outputs {
         stderr,
-        open_browser: launch_browser,
-        error: app_error,
+        open_browser,
+        error,
         kill_child,
         run_builder,
         some_task,
@@ -67,7 +67,7 @@ where
 
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_process_killer_driver.init(kill_child);
-    let open_url_driver_task = open_browser_driver.init(launch_browser);
+    let open_url_driver_task = open_browser_driver.init(open_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
     let fs_change_driver_task = notify_driver.init(());
 

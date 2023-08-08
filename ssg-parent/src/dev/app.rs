@@ -34,16 +34,16 @@ fn send_event_value<T: 'static>(
 pub(super) struct Inputs {
     pub(super) server_task: futures::future::LocalBoxFuture<'static, std::io::Error>,
     pub(super) child_killed: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
-    pub(super) fs_change: futures::stream::LocalBoxStream<
+    pub(super) notify: futures::stream::LocalBoxStream<
         'static,
         reactive::driver::notify::Result<reactive::driver::notify::Event>,
     >,
     pub(super) builder_started:
         futures::stream::LocalBoxStream<'static, Result<tokio::process::Child, std::io::Error>>,
     pub(super) launch_browser: bool,
-    pub(super) open_that_driver:
+    pub(super) browser_opened:
         futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
-    pub(super) local_host_port_url: reqwest::Url,
+    pub(super) url: reqwest::Url,
 }
 
 pub(super) struct Outputs {
@@ -59,11 +59,11 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
         child_killed,
-        fs_change: builder_crate_fs_change,
+        notify: builder_crate_fs_change,
         builder_started,
         launch_browser,
-        open_that_driver: browser_launch,
-        local_host_port_url,
+        browser_opened: browser_launch,
+        url: local_host_port_url,
     } = inputs;
 
     let message = format!("\nServer started at {local_host_port_url}\n")
