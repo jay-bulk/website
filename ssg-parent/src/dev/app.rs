@@ -102,12 +102,24 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
     let some_task = output
-        .for_each(move |event| match event {
-            OutputEvent::RunBuilder => send_event_value(&run_builder_sender, ()),
-            OutputEvent::KillChildProcess(child) => send_event_value(&kill_child_sender, child),
-            OutputEvent::Error(error) => send_event_value(&error_sender, error),
-            OutputEvent::Stderr(output) => send_event_value(&stderr_sender, output),
-            OutputEvent::OpenBrowser => send_event_value(&open_browser_sender, ()),
+        .for_each(async move |event| {
+            match event {
+                OutputEvent::RunBuilder => {
+                    run_builder_sender.clone().send(()).await.unwrap();
+                }
+                OutputEvent::KillChildProcess(child) => {
+                    send_event_value(&kill_child_sender, child);
+                }
+                OutputEvent::Error(error) => {
+                    send_event_value(&error_sender, error);
+                }
+                OutputEvent::Stderr(output) => {
+                    send_event_value(&stderr_sender, output);
+                }
+                OutputEvent::OpenBrowser => {
+                    send_event_value(&open_browser_sender, ());
+                }
+            };
         })
         .boxed_local();
 
