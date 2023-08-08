@@ -20,13 +20,12 @@ enum OutputEvent {
     OpenBrowser,
 }
 
-fn send_event_value<T: 'static>(
-    sender: &futures::channel::mpsc::Sender<T>,
+fn sender_return_task_that_sends_and_unwraps<T: 'static>(
+    mut sender: futures::channel::mpsc::Sender<T>,
     value: T,
 ) -> std::pin::Pin<Box<dyn futures::Future<Output = ()>>> {
-    let mut sender_clone = sender.clone();
     async move {
-        sender_clone.send(value).await.unwrap();
+        sender.send(value).await.unwrap();
     }
     .boxed_local()
 }
@@ -103,11 +102,21 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
 
     let some_task = output
         .for_each(move |event| match event {
-            OutputEvent::RunBuilder => send_event_value(&run_builder_sender, ()),
-            OutputEvent::KillChildProcess(child) => send_event_value(&kill_child_sender, child),
-            OutputEvent::Error(error) => send_event_value(&error_sender, error),
-            OutputEvent::Stderr(output) => send_event_value(&stderr_sender, output),
-            OutputEvent::OpenBrowser => send_event_value(&open_browser_sender, ()),
+            OutputEvent::RunBuilder => {
+                sender_return_task_that_sends_and_unwraps(run_builder_sender.clone(), ())
+            }
+            OutputEvent::KillChildProcess(child) => {
+                sender_return_task_that_sends_and_unwraps(kill_child_sender.clone(), child)
+            }
+            OutputEvent::Error(error) => {
+                sender_return_task_that_sends_and_unwraps(error_sender.clone(), error)
+            }
+            OutputEvent::Stderr(output) => {
+                sender_return_task_that_sends_and_unwraps(stderr_sender.clone(), output)
+            }
+            OutputEvent::OpenBrowser => {
+                sender_return_task_that_sends_and_unwraps(open_browser_sender.clone(), ())
+            }
         })
         .boxed_local();
 
