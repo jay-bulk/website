@@ -1,8 +1,8 @@
 pub mod child_process_killer;
 pub mod command;
-pub mod eprintln;
-pub mod open_that;
 pub mod notify;
+pub mod open_that;
+pub mod println;
 
 use futures::future::LocalBoxFuture;
 

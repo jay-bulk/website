@@ -17,10 +17,11 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError 
-  where camino::Utf8PathBuf : From<O>
+pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError
+where
+    camino::Utf8PathBuf: From<O>,
 {
-    let output_dir = camino::Utf8PathBuf::from( output_dir);
+    let output_dir = camino::Utf8PathBuf::from(output_dir);
     let Some(port) = portpicker::pick_unused_port() else {
         return DevError::NoFreePort
     };
@@ -38,19 +39,18 @@ pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError
         reactive::driver::command::StaticCommandDriver::new(cargo_run_builder);
     let (child_process_killer_driver, child_killed) =
         reactive::driver::child_process_killer::ChildProcessKillerDriver::new(());
-    let (open_url_driver, browser_launch) =
+    let (open_browser_driver, browser_opened) =
         reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string());
-    let (eprintln_driver, _) = reactive::driver::eprintln::EprintlnDriver::new(());
-    let (fs_change_driver, fs_change) =
-        reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME);
+    let (eprintln_driver, _) = reactive::driver::println::EprintlnDriver::new(());
+    let (notify_driver, notify) = reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME);
 
     let inputs = app::Inputs {
         server_task,
         child_killed,
-        fs_change,
+        fs_change: notify,
         builder_started,
         launch_browser,
-        open_that_driver: browser_launch,
+        open_that_driver: browser_opened,
         local_host_port_url: url,
     };
 
@@ -67,9 +67,9 @@ pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError
 
     let builder_driver_task = builder_driver.init(run_builder);
     let child_killer_task = child_process_killer_driver.init(kill_child);
-    let open_url_driver_task = open_url_driver.init(launch_browser);
+    let open_url_driver_task = open_browser_driver.init(launch_browser);
     let stderr_driver_task = eprintln_driver.init(stderr);
-    let fs_change_driver_task = fs_change_driver.init(());
+    let fs_change_driver_task = notify_driver.init(());
 
     futures::select! {
         error = app_error.fuse() => error,
