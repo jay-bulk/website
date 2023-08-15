@@ -92,23 +92,40 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     })
     .filter_map(futures::future::ready);
 
-    let output = initial.chain(reaction);
+    let mut output = initial.chain(reaction);
 
-    let (kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
-    let (run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
-    let (error_sender, error) = futures::channel::mpsc::channel(1);
-    let (stderr_sender, stderr) = futures::channel::mpsc::channel(1);
-    let (open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
+    let (mut kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
+    let (mut run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
+    let (mut error_sender, error) = futures::channel::mpsc::channel(1);
+    let (mut stderr_sender, stderr) = futures::channel::mpsc::channel(1);
+    let (mut open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
-    let some_task = output
-        .for_each(move |event| match event {
-            OutputEvent::RunBuilder => into_send(run_builder_sender.clone(), ()),
-            OutputEvent::KillChildProcess(child) => into_send(kill_child_sender.clone(), child),
-            OutputEvent::Error(error) => into_send(error_sender.clone(), error),
-            OutputEvent::Stderr(output) => into_send(stderr_sender.clone(), output),
-            OutputEvent::OpenBrowser => into_send(open_browser_sender.clone(), ()),
-        })
-        .boxed_local();
+    // let some_task = output
+    //     .for_each(move |event| match event {
+    //         OutputEvent::RunBuilder => into_send(run_builder_sender.clone(), ()),
+    //         OutputEvent::KillChildProcess(child) => into_send(kill_child_sender.clone(), child),
+    //         OutputEvent::Error(error) => into_send(error_sender.clone(), error),
+    //         OutputEvent::Stderr(output) => into_send(stderr_sender.clone(), output),
+    //         OutputEvent::OpenBrowser => into_send(open_browser_sender.clone(), ()),
+    //     })
+    //     .boxed_local();
+    let some_task = async move {
+        loop {
+            let event = output.next().await.unwrap();
+            match event {
+                OutputEvent::Stderr(output) => {
+                    stderr_sender.send(output).await.unwrap();
+                }
+                OutputEvent::RunBuilder => {
+                    run_builder_sender.send(()).await.unwrap();
+                }
+                OutputEvent::KillChildProcess(child) => todo!(),
+                OutputEvent::Error(_) => todo!(),
+                OutputEvent::OpenBrowser => todo!(),
+            }
+        }
+    }
+    .boxed_local();
 
     let error = error
         .into_future()
