@@ -6,6 +6,7 @@ pub mod println;
 
 use futures::future::LocalBoxFuture;
 
+/// Provides IO capability for a reactive process
 pub trait Driver: Sized {
     type Args;
     type Input;
