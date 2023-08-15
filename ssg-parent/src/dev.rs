@@ -3,6 +3,7 @@ mod app;
 use futures::FutureExt;
 use reactive::driver::Driver;
 
+/// Error type returned from the reactive app
 #[derive(Debug, thiserror::Error)]
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {

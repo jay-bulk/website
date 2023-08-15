@@ -20,6 +20,7 @@ enum OutputEvent {
     OpenBrowser,
 }
 
+/// Inputs for bootstrapping the reactive app
 pub(super) struct Inputs {
     pub(super) server_task: futures::future::LocalBoxFuture<'static, std::io::Error>,
     pub(super) child_killed: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
@@ -34,6 +35,7 @@ pub(super) struct Inputs {
     pub(super) url: reqwest::Url,
 }
 
+/// Outputs from the reactive app
 pub(super) struct Outputs {
     pub(super) stderr: futures::stream::LocalBoxStream<'static, String>,
     pub(super) kill_child: futures::stream::LocalBoxStream<'static, tokio::process::Child>,
