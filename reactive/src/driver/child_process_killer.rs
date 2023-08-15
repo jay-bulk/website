@@ -23,6 +23,7 @@ impl Driver for ChildProcessKillerDriver {
         let mut kill_child = kill_child
             .then(|mut child| async move { Ok(child.kill().await) })
             .boxed_local();
+
         async move {
             sender.send_all(&mut kill_child).map(Result::unwrap).await;
         }
