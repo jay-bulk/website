@@ -20,16 +20,6 @@ enum OutputEvent {
     OpenBrowser,
 }
 
-fn into_send<T: 'static>(
-    mut sender: futures::channel::mpsc::Sender<T>,
-    value: T,
-) -> std::pin::Pin<Box<dyn futures::Future<Output = ()>>> {
-    async move {
-        sender.send(value).await.unwrap();
-    }
-    .boxed_local()
-}
-
 pub(super) struct Inputs {
     pub(super) server_task: futures::future::LocalBoxFuture<'static, std::io::Error>,
     pub(super) child_killed: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
@@ -100,16 +90,7 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     let (mut stderr_sender, stderr) = futures::channel::mpsc::channel(1);
     let (mut open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
 
-    // let some_task = output
-    //     .for_each(move |event| match event {
-    //         OutputEvent::RunBuilder => into_send(run_builder_sender.clone(), ()),
-    //         OutputEvent::KillChildProcess(child) => into_send(kill_child_sender.clone(), child),
-    //         OutputEvent::Error(error) => into_send(error_sender.clone(), error),
-    //         OutputEvent::Stderr(output) => into_send(stderr_sender.clone(), output),
-    //         OutputEvent::OpenBrowser => into_send(open_browser_sender.clone(), ()),
-    //     })
-    //     .boxed_local();
-    let some_task = async move {
+    let stream_splitter_task = async move {
         loop {
             let event = output.next().await.unwrap();
             match event {
@@ -119,9 +100,15 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
                 OutputEvent::RunBuilder => {
                     run_builder_sender.send(()).await.unwrap();
                 }
-                OutputEvent::KillChildProcess(child) => todo!(),
-                OutputEvent::Error(_) => todo!(),
-                OutputEvent::OpenBrowser => todo!(),
+                OutputEvent::KillChildProcess(child) => {
+                    kill_child_sender.send(child).await.unwrap();
+                }
+                OutputEvent::Error(error) => {
+                    error_sender.send(error).await.unwrap();
+                }
+                OutputEvent::OpenBrowser => {
+                    open_browser_sender.send(()).await.unwrap();
+                }
             }
         }
     }
@@ -138,6 +125,6 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
         run_builder: run_builder.boxed_local(),
         open_browser: open_browser.boxed_local(),
         error,
-        stream_splitter_task: some_task,
+        stream_splitter_task,
     }
 }
