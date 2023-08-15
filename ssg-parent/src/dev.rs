@@ -18,6 +18,8 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
+/// Sets up a development environment that watches the file system, 
+/// recompiling the crate that when run describes the website on localhost when there are changes.
 pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError
 where
     camino::Utf8PathBuf: From<O>,
