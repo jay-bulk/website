@@ -5,6 +5,7 @@ use tokio::process::{Child, Command};
 
 use super::Driver;
 
+/// The driver is initialised with a command, the command is run when it recieves an input, the output spawns the command as a process or sends back an error.
 #[derive(Debug)]
 pub struct StaticCommandDriver(Command, mpsc::Sender<Result<Child, std::io::Error>>);
 

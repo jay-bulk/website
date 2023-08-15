@@ -5,6 +5,7 @@ use tokio::process::Child;
 
 use super::Driver;
 
+/// Takes child processes as input and kills them; returns possible errors in attempting to kill the child as output
 pub struct ChildProcessKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl Driver for ChildProcessKillerDriver {
