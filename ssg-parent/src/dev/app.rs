@@ -43,6 +43,7 @@ pub(super) struct Outputs {
     pub(super) stream_splitter_task: futures::future::LocalBoxFuture<'static, ()>,
 }
 
+/// Initializes the state machine for the dev environment
 pub(super) fn app(inputs: Inputs) -> Outputs {
     let Inputs {
         server_task,
