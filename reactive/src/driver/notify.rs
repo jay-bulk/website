@@ -61,6 +61,8 @@ where
             return pending().boxed_local();
         };
 
+        dbg!("watcher watching");
+
         pending().boxed_local()
     }
 }
