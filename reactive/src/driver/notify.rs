@@ -30,9 +30,15 @@ where
     fn new(path: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
+        let path = path.into();
+
+        let pwd = std::env::current_dir().unwrap();
+
+        let path 
+
         let fs_change_driver = Self {
             sender,
-            path: path.into(),
+            path,
             boo: PhantomData,
         };
 
@@ -56,6 +62,7 @@ where
         };
 
         if let Err(error) = watcher.watch(&self.path, RecursiveMode::Recursive) {
+            dbg!("{error}");
             block_on(self.sender.send(Err(error))).unwrap();
             return pending().boxed_local();
         };
