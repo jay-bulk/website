@@ -74,7 +74,7 @@ impl Render for HomePage {
                 a
                 class=(*BUTTON_CLASSES)
                     href=(self.add_page_path)
-                    { "Ads d your mob" }
+                    { "Add your mob" }
             }
             div class=(classes!("flex", "flex-wrap")) {
                 @for person in &self.participants {

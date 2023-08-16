@@ -43,6 +43,7 @@ where
         let mut sender = self.sender.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event>| {
+            println!("watcher is called");
             block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
         });
 
