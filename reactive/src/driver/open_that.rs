@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use futures::{
     channel::mpsc::{self, Sender},
     stream::LocalBoxStream,
-    FutureExt, SinkExt, StreamExt,
+    FutureExt, SinkExt, StreamExt, future::{LocalBoxFuture, self},
 };
 
 use super::Driver;
@@ -29,10 +29,10 @@ impl<O: AsRef<OsStr> + 'static> Driver for StaticOpenThatDriver<O> {
         )
     }
 
-    fn init(self, input: Self::Input) -> futures::future::LocalBoxFuture<'static, ()> {
+    fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let Self { os_str, mut sender } = self;
         let mut opened = input
-            .then(move |_| futures::future::ready(Ok(open::that(os_str.as_ref()))))
+            .then(move |_| future::ready(Ok(open::that(os_str.as_ref()))))
             .boxed_local();
         async move {
             sender.send_all(&mut opened).map(Result::unwrap).await;

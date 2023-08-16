@@ -1,4 +1,4 @@
-use futures::{future::LocalBoxFuture, stream::LocalBoxStream, FutureExt, StreamExt};
+use futures::{future::{LocalBoxFuture, self}, stream::LocalBoxStream, FutureExt, StreamExt};
 
 use super::Driver;
 
@@ -17,7 +17,7 @@ impl Driver for EprintlnDriver {
         input
             .for_each(|string| {
                 eprintln!("{string}");
-                futures::future::ready(())
+                future::ready(())
             })
             .boxed_local()
     }
