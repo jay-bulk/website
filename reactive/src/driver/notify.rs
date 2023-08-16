@@ -43,19 +43,19 @@ where
         let mut sender = self.sender.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event>| {
-            block_on(sender.feed(result)).expect("this closure gets sent to a blocking context");
+            block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
         });
 
         let mut watcher = match watcher {
             Ok(watcher) => watcher,
             Err(error) => {
-                block_on(self.sender.feed(Err(error))).unwrap();
+                block_on(self.sender.send(Err(error))).unwrap();
                 return pending().boxed_local();
             }
         };
 
         if let Err(error) = watcher.watch(&self.path, RecursiveMode::Recursive) {
-            block_on(self.sender.feed(Err(error))).unwrap();
+            block_on(self.sender.send(Err(error))).unwrap();
             return pending().boxed_local();
         };
 

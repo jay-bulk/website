@@ -82,18 +82,18 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
             .map(InputEvent::BuilderStarted)
             .boxed_local(),
         browser_launch.map(InputEvent::BrowserOpened).boxed_local(),
-    ])    .inspect(|output| {
-        dbg!(output);})
+    ])
+    .inspect(|input| {
+        dbg!(input);
+    })
     .scan(state::State::default(), move |state, input| {
         future::ready(Some(state.input_event(input)))
     })
     .filter_map(future::ready);
 
-    let mut output = initial.chain(reaction)
-    .inspect(|output| {
+    let mut output = initial.chain(reaction).inspect(|output| {
         dbg!(output);
-    })
-        ;
+    });
 
     let (mut kill_child_sender, kill_child) = mpsc::channel(1);
     let (mut run_builder_sender, run_builder) = mpsc::channel(1);
@@ -104,6 +104,7 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     let stream_splitter_task = async move {
         loop {
             let event = output.next().await.unwrap();
+            println!("after await");
             match event {
                 OutputEvent::Stderr(output) => {
                     stderr_sender.send(output).await.unwrap();
