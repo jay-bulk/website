@@ -1,13 +1,18 @@
 mod state;
 
 use colored::Colorize;
-use futures::{FutureExt, SinkExt, StreamExt};
+use futures::{
+    channel::mpsc,
+    future::{self, LocalBoxFuture},
+    stream::{self, LocalBoxStream},
+    FutureExt, SinkExt, StreamExt,
+};
 
 enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
     Notify(reactive::driver::notify::Result<reactive::driver::notify::Event>),
-    BuilderStarted(Result<tokio::process::Child, std::io::Error>),
-    BrowserOpened(Result<(), std::io::Error>),
+    BuilderStarted(std::io::Result<tokio::process::Child>),
+    BrowserOpened(std::io::Result<()>),
     ServerError(std::io::Error),
 }
 
@@ -22,27 +27,24 @@ enum OutputEvent {
 
 /// Inputs for bootstrapping the reactive app
 pub(super) struct Inputs {
-    pub(super) server_task: futures::future::LocalBoxFuture<'static, std::io::Error>,
-    pub(super) child_killed: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
-    pub(super) notify: futures::stream::LocalBoxStream<
-        'static,
-        reactive::driver::notify::Result<reactive::driver::notify::Event>,
-    >,
-    pub(super) builder_started:
-        futures::stream::LocalBoxStream<'static, Result<tokio::process::Child, std::io::Error>>,
+    pub(super) server_task: LocalBoxFuture<'static, std::io::Error>,
+    pub(super) child_killed: LocalBoxStream<'static, std::io::Result<()>>,
+    pub(super) notify:
+        LocalBoxStream<'static, reactive::driver::notify::Result<reactive::driver::notify::Event>>,
+    pub(super) builder_started: LocalBoxStream<'static, std::io::Result<tokio::process::Child>>,
     pub(super) launch_browser: bool,
-    pub(super) browser_opened: futures::stream::LocalBoxStream<'static, Result<(), std::io::Error>>,
+    pub(super) browser_opened: LocalBoxStream<'static, std::io::Result<()>>,
     pub(super) url: reqwest::Url,
 }
 
 /// Outputs from the reactive app
 pub(super) struct Outputs {
-    pub(super) stderr: futures::stream::LocalBoxStream<'static, String>,
-    pub(super) kill_child: futures::stream::LocalBoxStream<'static, tokio::process::Child>,
-    pub(super) run_builder: futures::stream::LocalBoxStream<'static, ()>,
-    pub(super) open_browser: futures::stream::LocalBoxStream<'static, ()>,
-    pub(super) error: futures::future::LocalBoxFuture<'static, super::DevError>,
-    pub(super) stream_splitter_task: futures::future::LocalBoxFuture<'static, ()>,
+    pub(super) stderr: LocalBoxStream<'static, String>,
+    pub(super) kill_child: LocalBoxStream<'static, tokio::process::Child>,
+    pub(super) run_builder: LocalBoxStream<'static, ()>,
+    pub(super) open_browser: LocalBoxStream<'static, ()>,
+    pub(super) error: LocalBoxFuture<'static, super::DevError>,
+    pub(super) stream_splitter_task: LocalBoxFuture<'static, ()>,
 }
 
 /// Initializes the state machine for the dev environment
@@ -65,10 +67,10 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     if launch_browser {
         initial.push(OutputEvent::OpenBrowser);
     }
-    let initial = futures::stream::iter(initial);
+    let initial = stream::iter(initial);
 
-    let reaction = futures::stream::select_all([
-        futures::stream::once(server_task)
+    let reaction = stream::select_all([
+        stream::once(server_task)
             .map(InputEvent::ServerError)
             .boxed_local(),
         child_killed.map(InputEvent::BuilderKilled).boxed_local(),
@@ -81,17 +83,17 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
         browser_launch.map(InputEvent::BrowserOpened).boxed_local(),
     ])
     .scan(state::State::default(), move |state, input| {
-        futures::future::ready(Some(state.input_event(input)))
+        future::ready(Some(state.input_event(input)))
     })
-    .filter_map(futures::future::ready);
+    .filter_map(future::ready);
 
     let mut output = initial.chain(reaction);
 
-    let (mut kill_child_sender, kill_child) = futures::channel::mpsc::channel(1);
-    let (mut run_builder_sender, run_builder) = futures::channel::mpsc::channel(1);
-    let (mut error_sender, error) = futures::channel::mpsc::channel(1);
-    let (mut stderr_sender, stderr) = futures::channel::mpsc::channel(1);
-    let (mut open_browser_sender, open_browser) = futures::channel::mpsc::channel(1);
+    let (mut kill_child_sender, kill_child) = mpsc::channel(1);
+    let (mut run_builder_sender, run_builder) = mpsc::channel(1);
+    let (mut error_sender, error) = mpsc::channel(1);
+    let (mut stderr_sender, stderr) = mpsc::channel(1);
+    let (mut open_browser_sender, open_browser) = mpsc::channel(1);
 
     let stream_splitter_task = async move {
         loop {
