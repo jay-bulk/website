@@ -19,7 +19,7 @@ impl State {
     }
 
     #[allow(clippy::unnecessary_wraps)]
-    fn builder_killed(&mut self, result: Result<(), std::io::Error>) -> Option<super::OutputEvent> {
+    fn builder_killed(&mut self, result: std::io::Result<()>) -> Option<super::OutputEvent> {
         match result {
             Ok(_) => {
                 self.builder = BuilderState::None;
@@ -58,7 +58,7 @@ impl State {
 
     fn builder_started(
         &mut self,
-        child: Result<tokio::process::Child, std::io::Error>,
+        child: std::io::Result<tokio::process::Child>,
     ) -> Option<super::OutputEvent> {
         match child {
             Ok(child) => match self.builder {
