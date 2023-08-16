@@ -87,7 +87,11 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
     })
     .filter_map(future::ready);
 
-    let mut output = initial.chain(reaction);
+    let mut output = initial.chain(reaction)
+    .inspect(|output| {
+        dbg!(output);
+    })
+        ;
 
     let (mut kill_child_sender, kill_child) = mpsc::channel(1);
     let (mut run_builder_sender, run_builder) = mpsc::channel(1);
