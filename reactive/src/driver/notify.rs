@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, path::PathBuf};
 
 use futures::{
-    channel::mpsc::{channel, Sender},
+    channel::mpsc,
     executor::block_on,
     future::{pending, LocalBoxFuture},
     stream::LocalBoxStream,
@@ -14,7 +14,7 @@ use super::Driver;
 pub use notify::{Error, Event, EventKind, Result};
 
 pub struct FsChangeDriver<T> {
-    sender: Sender<Result<Event>>,
+    sender: mpsc::Sender<Result<Event>>,
     path: PathBuf,
     boo: PhantomData<fn(T) -> PathBuf>,
 }
@@ -28,7 +28,7 @@ where
     type Output = LocalBoxStream<'static, Result<Event>>;
 
     fn new(path: Self::Args) -> (Self, Self::Output) {
-        let (sender, receiver) = channel::<Result<Event>>(1);
+        let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
         let fs_change_driver = Self {
             sender,

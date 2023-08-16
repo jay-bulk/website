@@ -235,16 +235,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-fn-stream"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d5f39746cfb8c7686cc5da3be489d066b2dee606e6e0daec64e59657f016be7"
-dependencies = [
- "futures",
- "pin-project-lite 0.2.9",
-]
-
-[[package]]
 name = "async-fs"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3568,7 +3558,6 @@ dependencies = [
 name = "reactive"
 version = "0.1.0"
 dependencies = [
- "async-fn-stream",
  "futures",
  "notify 6.0.1",
  "open 5.0.0",
