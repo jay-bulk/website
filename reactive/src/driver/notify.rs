@@ -57,7 +57,6 @@ where
         };
 
         if let Err(error) = watcher.watch(&self.path, RecursiveMode::Recursive) {
-            dbg!("{error}");
             block_on(self.sender.send(Err(error))).unwrap();
             return pending().boxed_local();
         };
