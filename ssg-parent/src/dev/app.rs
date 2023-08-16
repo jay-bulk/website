@@ -8,6 +8,7 @@ use futures::{
     FutureExt, SinkExt, StreamExt,
 };
 
+#[derive(Debug)]
 enum InputEvent {
     BuilderKilled(Result<(), std::io::Error>),
     Notify(reactive::driver::notify::Result<reactive::driver::notify::Event>),
@@ -81,7 +82,8 @@ pub(super) fn app(inputs: Inputs) -> Outputs {
             .map(InputEvent::BuilderStarted)
             .boxed_local(),
         browser_launch.map(InputEvent::BrowserOpened).boxed_local(),
-    ])
+    ])    .inspect(|output| {
+        dbg!(output);})
     .scan(state::State::default(), move |state, input| {
         future::ready(Some(state.input_event(input)))
     })
