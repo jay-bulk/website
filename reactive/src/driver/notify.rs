@@ -30,15 +30,10 @@ where
     fn new(path: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
-        let path = path.into();
-
-        let pwd = std::env::current_dir().unwrap();
-
-        let path 
 
         let fs_change_driver = Self {
             sender,
-            path,
+            path : path.into(),
             boo: PhantomData,
         };
 
@@ -49,7 +44,7 @@ where
         let mut sender = self.sender.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event>| {
-            println!("watcher is called");
+            panic!("HAHA");
             block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
         });
 
