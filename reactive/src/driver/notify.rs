@@ -42,7 +42,7 @@ where
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let mut sender = self.sender.clone();
-
+        block_on( sender.send(Ok(notify::Event::new(notify::EventKind::Any))) ).unwrap(); // remove 
         let watcher = recommended_watcher(move |result: Result<Event>| {
             panic!("HAHA");
             block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
