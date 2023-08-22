@@ -30,10 +30,9 @@ where
     fn new(path: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
-
         let fs_change_driver = Self {
             sender,
-            path : path.into(),
+            path: path.into(),
             boo: PhantomData,
         };
 
@@ -42,9 +41,8 @@ where
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let mut sender = self.sender.clone();
-        block_on( sender.send(Ok(notify::Event::new(notify::EventKind::Any))) ).unwrap(); // remove 
+        block_on(sender.send(Ok(notify::Event::new(notify::EventKind::Any)))).unwrap(); // remove
         let watcher = recommended_watcher(move |result: Result<Event>| {
-            panic!("HAHA");
             block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
         });
 

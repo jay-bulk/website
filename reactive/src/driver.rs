@@ -6,12 +6,20 @@ pub mod println;
 
 use futures::future::LocalBoxFuture;
 
-/// Provides IO capability for a reactive process
+/// Provides IO
 pub trait Driver: Sized {
+    /// Argument(s) for driver creation.
     type Args;
+
+    /// The input _of the driver_.
     type Input;
+
+    /// The output _of the driver_.
     type Output;
 
+    /// This is how a driver is created.
     fn new(init: Self::Args) -> (Self, Self::Output);
+
+    /// This closes the (possible) loop and provides a task that would execute the driver.
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()>;
 }
