@@ -96,7 +96,7 @@ impl EventLoop {
 
         let inotify_fd = inotify.as_raw_fd();
         let mut evented_inotify = mio::unix::SourceFd(&inotify_fd);
-        // MARKER
+        asdflkajsdf;asjd;lj
         poll.registry()
             .register(&mut evented_inotify, INOTIFY, mio::Interest::READABLE)?;
 
