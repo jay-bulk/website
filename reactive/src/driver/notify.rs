@@ -55,6 +55,6 @@ where
             return pending().boxed_local();
         };
 
-        pending().boxed_local()
+        async move{let s = self; pending().await }.boxed_local()
     }
 }
