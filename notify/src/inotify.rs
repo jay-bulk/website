@@ -141,6 +141,7 @@ impl EventLoop {
 
             // Process whatever happened.
             for event in &events {
+                println!("notify firing handler");
                 self.handle_event(event);
                 panic!("HANDLED");
             }
@@ -157,6 +158,7 @@ impl EventLoop {
     // Handle a single event.
     fn handle_event(&mut self, event: &mio::event::Event) {
         match event.token() {
+            asdfasdfafs
             MESSAGE => {
                 // The channel is readable - handle messages.
                 self.handle_messages()
