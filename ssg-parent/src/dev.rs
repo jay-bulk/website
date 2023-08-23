@@ -8,7 +8,7 @@ use reactive::driver::Driver;
 #[allow(clippy::module_name_repetitions)]
 pub enum DevError {
     #[error(transparent)]
-    Notify(reactive::driver::notify::Error),
+    Notify(#[from] reactive::driver::notify::Error),
     #[error(transparent)]
     Io(std::io::Error),
     #[error("no free port")]
@@ -39,13 +39,16 @@ where
     let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).expect("valid");
 
     let (builder_driver, builder_started) =
-        reactive::driver::command::StaticCommandDriver::new(cargo_run_builder);
+        reactive::driver::command::StaticCommandDriver::new(cargo_run_builder).unwrap();
     let (child_process_killer_driver, child_killed) =
-        reactive::driver::child_process_killer::ChildProcessKillerDriver::new(());
+        reactive::driver::child_process_killer::ChildProcessKillerDriver::new(()).unwrap();
     let (open_browser_driver, browser_opened) =
-        reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string());
-    let (eprintln_driver, _) = reactive::driver::println::EprintlnDriver::new(());
-    let (notify_driver, notify) = reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME);
+        reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string()).unwrap();
+    let (eprintln_driver, _) = reactive::driver::println::EprintlnDriver::new(()).unwrap();
+    let (notify_driver, notify) = match reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME) {
+        Ok(val) => val,
+        Err(e) => return e.into(),
+    };
 
     let inputs = app::Inputs {
         server_task,
