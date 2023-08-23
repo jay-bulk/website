@@ -118,7 +118,10 @@ impl EventLoop {
     pub fn run(self) {
         let _ = thread::Builder::new()
             .name("notify-rs inotify loop".to_string())
-            .spawn(|| self.event_loop_thread());
+            .spawn(|| {
+                panic!("EventLoop::run");
+                self.event_loop_thread()
+            });
     }
 
     fn event_loop_thread(mut self) {
