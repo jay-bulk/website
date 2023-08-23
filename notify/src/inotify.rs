@@ -27,6 +27,7 @@ const MESSAGE: mio::Token = mio::Token(1);
 // -  messages telling it what to do
 //
 // -  events telling it that something has happened on one of the watched files.
+asdfasdf
 struct EventLoop {
     running: bool,
     poll: mio::Poll,
@@ -96,7 +97,6 @@ impl EventLoop {
 
         let inotify_fd = inotify.as_raw_fd();
         let mut evented_inotify = mio::unix::SourceFd(&inotify_fd);
-        asdflkajsdf;asjd;lj
         poll.registry()
             .register(&mut evented_inotify, INOTIFY, mio::Interest::READABLE)?;
 
