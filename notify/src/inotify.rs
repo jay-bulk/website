@@ -143,7 +143,7 @@ impl EventLoop {
             for event in &events {
                 println!("notify firing handler");
                 self.handle_event(event);
-                panic!("HANDLED");
+                // panic!("HANDLED");
             }
 
             // Stop, if we're done.
@@ -158,12 +158,12 @@ impl EventLoop {
     // Handle a single event.
     fn handle_event(&mut self, event: &mio::event::Event) {
         match event.token() {
-            asdfasdfafs
             MESSAGE => {
                 // The channel is readable - handle messages.
                 self.handle_messages()
             }
             INOTIFY => {
+                panic!("INOTIFY TOKEN");
                 // inotify has something to tell us.
                 self.handle_inotify()
             }
@@ -178,9 +178,11 @@ impl EventLoop {
                     let _ = tx.send(self.add_watch(path, recursive_mode.is_recursive(), true));
                 }
                 EventLoopMsg::RemoveWatch(path, tx) => {
+                    panic!("EventLoopMsg::RemoveWatch(path, tx)");
                     let _ = tx.send(self.remove_watch(path, false));
                 }
                 EventLoopMsg::Shutdown => {
+                    panic!("EventLoopMsg::Shutdown");
                     let _ = self.remove_all_watches();
                     if let Some(inotify) = self.inotify.take() {
                         let _ = inotify.close();
@@ -189,6 +191,7 @@ impl EventLoop {
                     break;
                 }
                 EventLoopMsg::Configure(config, tx) => {
+                    panic!("EventLoopMsg::Configure(config, tx)");
                     self.configure_raw_mode(config, tx);
                 }
             }
