@@ -118,9 +118,7 @@ impl EventLoop {
     pub fn run(self) {
         let _ = thread::Builder::new()
             .name("notify-rs inotify loop".to_string())
-            .spawn(|| {
-                self.event_loop_thread()
-            });
+            .spawn(|| self.event_loop_thread());
     }
 
     fn event_loop_thread(mut self) {
@@ -132,11 +130,10 @@ impl EventLoop {
                     // System call was interrupted, we will retry
                     // TODO: Not covered by tests (to reproduce likely need to setup signal handlers)
 
-            panic!("Err(ref e)");
+                    panic!("Err(ref e)");
                 }
                 Err(e) => panic!("poll failed: {}", e),
-                Ok(()) => {
-                }
+                Ok(()) => {}
             }
 
             // Process whatever happened.
@@ -148,7 +145,7 @@ impl EventLoop {
 
             // Stop, if we're done.
             if !self.running {
-                panic!{"FINISHED RUNNING"}
+                panic! {"FINISHED RUNNING"}
                 break;
             }
             println!("How many times? ...");
