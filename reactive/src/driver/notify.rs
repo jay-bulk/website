@@ -35,7 +35,8 @@ where
         let mut sender_clone = sender.clone();
 
         let watcher = recommended_watcher(move |result: Result<Event>| {
-            block_on(sender_clone.send(result)).expect("this closure gets sent to a blocking context");
+            block_on(sender_clone.send(result))
+                .expect("this closure gets sent to a blocking context");
         })?;
 
         let fs_change_driver = Self {
@@ -49,7 +50,6 @@ where
     }
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
-
         if let Err(error) = self.watcher.watch(&self.path, RecursiveMode::Recursive) {
             block_on(self.sender.send(Err(error))).unwrap();
             return pending().boxed_local();

@@ -18,7 +18,7 @@ pub enum DevError {
 const BUILDER_CRATE_NAME: &str = "builder";
 const LOCALHOST: &str = "localhost";
 
-/// Sets up a development environment that watches the file system, 
+/// Sets up a development environment that watches the file system,
 /// recompiling the crate that when run describes the website on localhost when there are changes.
 pub async fn dev<O>(launch_browser: bool, output_dir: O) -> DevError
 where
@@ -39,16 +39,20 @@ where
     let url = reqwest::Url::parse(&format!("http://{LOCALHOST}:{port}")).expect("valid");
 
     let (builder_driver, builder_started) =
-        reactive::driver::command::StaticCommandDriver::new(cargo_run_builder).unwrap();
+        reactive::driver::command::StaticCommandDriver::new(cargo_run_builder).expect("infallible");
     let (child_process_killer_driver, child_killed) =
-        reactive::driver::child_process_killer::ChildProcessKillerDriver::new(()).unwrap();
+        reactive::driver::child_process_killer::ChildProcessKillerDriver::new(())
+            .expect("infallible");
     let (open_browser_driver, browser_opened) =
-        reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string()).unwrap();
-    let (eprintln_driver, _) = reactive::driver::println::EprintlnDriver::new(()).unwrap();
-    let (notify_driver, notify) = match reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME) {
-        Ok(val) => val,
-        Err(e) => return e.into(),
-    };
+        reactive::driver::open_that::StaticOpenThatDriver::new(url.to_string())
+            .expect("infallible");
+    let (eprintln_driver, _) =
+        reactive::driver::println::EprintlnDriver::new(()).expect("infallible");
+    let (notify_driver, notify) =
+        match reactive::driver::notify::FsChangeDriver::new(BUILDER_CRATE_NAME) {
+            Ok(val) => val,
+            Err(e) => return e.into(),
+        };
 
     let inputs = app::Inputs {
         server_task,
