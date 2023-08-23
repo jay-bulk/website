@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use futures::{
     channel::mpsc, future::LocalBoxFuture, stream::LocalBoxStream, FutureExt, SinkExt, StreamExt,
 };
@@ -10,13 +12,14 @@ pub struct ChildProcessKillerDriver(mpsc::Sender<Result<(), std::io::Error>>);
 
 impl Driver for ChildProcessKillerDriver {
     type Args = ();
+    type ConstructionError = Infallible;
     type Input = LocalBoxStream<'static, Child>;
     type Output = LocalBoxStream<'static, Result<(), std::io::Error>>;
 
-    fn new(_init: Self::Args) -> (Self, Self::Output) {
+    fn new(_init: Self::Args) -> Result<(Self, Self::Output), Self::ConstructionError> {
         let (sender, receiver) = mpsc::channel(1);
         let child_killer_driver = Self(sender);
-        (child_killer_driver, receiver.boxed_local())
+        Ok((child_killer_driver, receiver.boxed_local()))
     }
 
     fn init(self, kill_child: Self::Input) -> LocalBoxFuture<'static, ()> {

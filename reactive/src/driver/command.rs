@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use futures::{
     channel::mpsc, future::LocalBoxFuture, stream::LocalBoxStream, FutureExt, SinkExt, StreamExt,
 };
@@ -11,14 +13,15 @@ pub struct StaticCommandDriver(Command, mpsc::Sender<Result<Child, std::io::Erro
 
 impl Driver for StaticCommandDriver {
     type Args = Command;
+    type ConstructionError = Infallible;
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, Result<Child, std::io::Error>>;
 
-    fn new(command: Self::Args) -> (Self, Self::Output) {
+    fn new(command: Self::Args) -> Result<(Self, Self::Output), Self::ConstructionError> {
         let (sender, receiver) = mpsc::channel(1);
         let builder_driver = Self(command, sender);
         let output = receiver.boxed_local();
-        (builder_driver, output)
+        Ok((builder_driver, output))
     }
 
     fn init(self, start_builder: Self::Input) -> LocalBoxFuture<'static, ()> {

@@ -1,9 +1,10 @@
-use std::ffi::OsStr;
+use std::{convert::Infallible, ffi::OsStr};
 
 use futures::{
     channel::mpsc::{self, Sender},
+    future::{self, LocalBoxFuture},
     stream::LocalBoxStream,
-    FutureExt, SinkExt, StreamExt, future::{LocalBoxFuture, self},
+    FutureExt, SinkExt, StreamExt,
 };
 
 use super::Driver;
@@ -15,18 +16,19 @@ pub struct StaticOpenThatDriver<O: AsRef<OsStr> + 'static> {
 
 impl<O: AsRef<OsStr> + 'static> Driver for StaticOpenThatDriver<O> {
     type Args = O;
+    type ConstructionError = Infallible;
     type Input = LocalBoxStream<'static, ()>;
     type Output = LocalBoxStream<'static, std::io::Result<()>>;
 
-    fn new(init: Self::Args) -> (Self, Self::Output) {
+    fn new(init: Self::Args) -> Result<(Self, Self::Output), Self::ConstructionError> {
         let (sender, receiver) = mpsc::channel(1);
-        (
-            Self {
-                os_str: init,
-                sender,
-            },
-            receiver.boxed_local(),
-        )
+
+        let driver = Self {
+            os_str: init,
+            sender,
+        };
+
+        Ok((driver, receiver.boxed_local()))
     }
 
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()> {

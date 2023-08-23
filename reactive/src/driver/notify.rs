@@ -7,7 +7,7 @@ use futures::{
     stream::LocalBoxStream,
     FutureExt, SinkExt, StreamExt,
 };
-use notify::{recommended_watcher, RecursiveMode, Watcher, RecommendedWatcher};
+use notify::{recommended_watcher, RecommendedWatcher, RecursiveMode, Watcher};
 
 use super::Driver;
 
@@ -32,9 +32,11 @@ where
     fn new(path: Self::Args) -> Result<(Self, Self::Output)> {
         let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
+        let sender_clone = sender.clone();
+
         let watcher = recommended_watcher(move |result: Result<Event>| {
             panic!("our handler");
-            block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
+            block_on(sender_clone.send(result)).expect("this closure gets sent to a blocking context");
             panic!("end of our handler");
         })?;
 
@@ -51,15 +53,7 @@ where
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let mut sender = self.sender.clone();
 
-        let mut watcher = match self.watcher {
-            Ok(watcher) => watcher,
-            Err(error) => {
-                block_on(self.sender.send(Err(error))).unwrap();
-                return pending().boxed_local();
-            }
-        };
-
-        if let Err(error) = watcher.watch(&self.path, RecursiveMode::Recursive) {
+        if let Err(error) = self.watcher.watch(&self.path, RecursiveMode::Recursive) {
             block_on(self.sender.send(Err(error))).unwrap();
             return pending().boxed_local();
         };
