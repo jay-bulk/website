@@ -27,7 +27,6 @@ const MESSAGE: mio::Token = mio::Token(1);
 // -  messages telling it what to do
 //
 // -  events telling it that something has happened on one of the watched files.
-asdfasdf
 struct EventLoop {
     running: bool,
     poll: mio::Poll,
@@ -130,13 +129,17 @@ impl EventLoop {
                 Err(ref e) if matches!(e.kind(), std::io::ErrorKind::Interrupted) => {
                     // System call was interrupted, we will retry
                     // TODO: Not covered by tests (to reproduce likely need to setup signal handlers)
+
+            panic!("Err(ref e)");
                 }
                 Err(e) => panic!("poll failed: {}", e),
-                Ok(()) => {}
+                Ok(()) => {
+                }
             }
 
             // Process whatever happened.
             for event in &events {
+                dbg!(&event);
                 self.handle_event(event);
             }
 
