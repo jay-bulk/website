@@ -11,6 +11,9 @@ pub trait Driver: Sized {
     /// Argument(s) for driver creation.
     type Args;
 
+    /// Driver creation error.
+    type ConstructionError;
+
     /// The input _of the driver_.
     type Input;
 

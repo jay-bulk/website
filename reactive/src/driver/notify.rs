@@ -25,17 +25,18 @@ where
     PathBuf: From<T>,
 {
     type Args = T;
+    type ConstructionError = notify::Error;
     type Input = ();
     type Output = LocalBoxStream<'static, Result<Event>>;
 
-    fn new(path: Self::Args) -> (Self, Self::Output) {
+    fn new(path: Self::Args) -> Result<(Self, Self::Output)> {
         let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
         let watcher = recommended_watcher(move |result: Result<Event>| {
             panic!("our handler");
             block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
             panic!("end of our handler");
-        });
+        })?;
 
         let fs_change_driver = Self {
             watcher,
@@ -44,13 +45,13 @@ where
             boo: PhantomData,
         };
 
-        (fs_change_driver, receiver.boxed_local())
+        Ok((fs_change_driver, receiver.boxed_local()))
     }
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let mut sender = self.sender.clone();
 
-        let mut watcher = match watcher {
+        let mut watcher = match self.watcher {
             Ok(watcher) => watcher,
             Err(error) => {
                 block_on(self.sender.send(Err(error))).unwrap();
