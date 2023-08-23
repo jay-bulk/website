@@ -18,7 +18,7 @@ pub trait Driver: Sized {
     type Output;
 
     /// This is how a driver is created.
-    fn new(init: Self::Args) -> (Self, Self::Output);
+    fn new(init: Self::Args) -> Result<(Self, Self::Output), Self::ConstructionError>;
 
     /// This closes the (possible) loop and provides a task that would execute the driver.
     fn init(self, input: Self::Input) -> LocalBoxFuture<'static, ()>;

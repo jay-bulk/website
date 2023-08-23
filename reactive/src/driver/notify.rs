@@ -7,13 +7,14 @@ use futures::{
     stream::LocalBoxStream,
     FutureExt, SinkExt, StreamExt,
 };
-use notify::{recommended_watcher, RecursiveMode, Watcher};
+use notify::{recommended_watcher, RecursiveMode, Watcher, RecommendedWatcher};
 
 use super::Driver;
 
 pub use notify::{Error, Event, EventKind, Result};
 
 pub struct FsChangeDriver<T> {
+    watcher: RecommendedWatcher,
     sender: mpsc::Sender<Result<Event>>,
     path: PathBuf,
     boo: PhantomData<fn(T) -> PathBuf>,
@@ -30,7 +31,14 @@ where
     fn new(path: Self::Args) -> (Self, Self::Output) {
         let (sender, receiver) = mpsc::channel::<Result<Event>>(1);
 
+        let watcher = recommended_watcher(move |result: Result<Event>| {
+            panic!("our handler");
+            block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
+            panic!("end of our handler");
+        });
+
         let fs_change_driver = Self {
+            watcher,
             sender,
             path: path.into(),
             boo: PhantomData,
@@ -41,11 +49,6 @@ where
 
     fn init(mut self, _input: Self::Input) -> LocalBoxFuture<'static, ()> {
         let mut sender = self.sender.clone();
-        let watcher = recommended_watcher(move |result: Result<Event>| {
-            panic!("our handler");
-            block_on(sender.send(result)).expect("this closure gets sent to a blocking context");
-            panic!("end of our handler");
-        });
 
         let mut watcher = match watcher {
             Ok(watcher) => watcher,
