@@ -119,7 +119,6 @@ impl EventLoop {
         let _ = thread::Builder::new()
             .name("notify-rs inotify loop".to_string())
             .spawn(|| {
-                panic!("EventLoop::run");
                 self.event_loop_thread()
             });
     }
@@ -142,14 +141,16 @@ impl EventLoop {
 
             // Process whatever happened.
             for event in &events {
-                dbg!(&event);
                 self.handle_event(event);
+                panic!("HANDLED");
             }
 
             // Stop, if we're done.
             if !self.running {
+                panic!{"FINISHED RUNNING"}
                 break;
             }
+            println!("How many times? ...");
         }
     }
 
